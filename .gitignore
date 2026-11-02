@@ -3,3 +3,5 @@ dist
 .env
 *.tsbuildinfo
 coverage
+.agent
+src/generated
