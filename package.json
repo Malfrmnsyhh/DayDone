@@ -1,10 +1,13 @@
 {
   "name": "DayDone",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "DayDone monorepo",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "pnpm -r --parallel run start:dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "format": "pnpm -r run format"
   },
   "keywords": [],
   "author": "",
