@@ -1,14 +1,24 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import { LogsService } from './logs.service.js';
 import {
+  createLogSchema,
   listLogsQuerySchema,
+  updateLogSchema,
+  type CreateLogDto,
   type ListLogsQuery,
+  type UpdateLogDto,
 } from './dto/log.schema.js';
 
 @Controller('logs')
@@ -23,5 +33,24 @@ export class LogsController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.logsService.findOne(id);
+  }
+
+  @Post()
+  create(@Body({ schema: createLogSchema }) dto: CreateLogDto) {
+    return this.logsService.create(dto);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body({ schema: updateLogSchema }) dto: UpdateLogDto,
+  ) {
+    return this.logsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    this.logsService.remove(id);
   }
 }
