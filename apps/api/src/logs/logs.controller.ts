@@ -14,9 +14,11 @@ import {
 import { LogsService } from './logs.service.js';
 import {
   createLogSchema,
+  dateParamSchema,
   listLogsQuerySchema,
   updateLogSchema,
   type CreateLogDto,
+  type DateParam,
   type ListLogsQuery,
   type UpdateLogDto,
 } from './dto/log.schema.js';
@@ -28,6 +30,11 @@ export class LogsController {
   @Get()
   findAll(@Query({ schema: listLogsQuerySchema }) query: ListLogsQuery) {
     return this.logsService.findAll(query);
+  }
+
+  @Get('by-date/:date')
+  findByDate(@Param({ schema: dateParamSchema }) params: DateParam) {
+    return this.logsService.findByDate(params.date);
   }
 
   @Get(':id')

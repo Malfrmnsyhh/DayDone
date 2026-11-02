@@ -16,9 +16,15 @@ export class LogsService {
   private logs: LogEntry[] = [];
 
   findAll(query: ListLogsQuery): LogEntry[] {
+    const searchLower = query.search?.toLowerCase();
+
     return this.logs
       .filter((log) => !query.from || log.date >= query.from)
       .filter((log) => !query.to || log.date <= query.to)
+      .filter(
+        (log) =>
+          !searchLower || log.description.toLowerCase().includes(searchLower),
+      )
       .sort((a, b) => b.date.localeCompare(a.date)); // terbaru di atas
   }
 
@@ -26,6 +32,16 @@ export class LogsService {
     const log = this.logs.find((item) => item.id === id);
     if (!log) {
       throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
+    }
+    return log;
+  }
+
+  findByDate(date: string): LogEntry {
+    const log = this.logs.find((item) => item.date === date);
+    if (!log) {
+      throw new NotFoundException(
+        `Logbook untuk tanggal ${date} tidak ditemukan`,
+      );
     }
     return log;
   }
