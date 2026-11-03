@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { createObserveModule } from '@nestjs/observe';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+import { DevAuthGuard } from './auth/dev-auth.guard.js';
 import { validateEnv } from './config/env.schema.js';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter.js';
 import { HealthModule } from './health/health.module.js';
 import { LogsModule } from './logs/logs.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -28,7 +29,16 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     HealthModule,
     LogsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: DevAuthGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}
