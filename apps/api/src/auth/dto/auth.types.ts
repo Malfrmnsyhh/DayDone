@@ -20,3 +20,4 @@ export interface RefreshResponse {
   accessTokenExpiresAt: string;
   refreshToken?: string;
 }
+

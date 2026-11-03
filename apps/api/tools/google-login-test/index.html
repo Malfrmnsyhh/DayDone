@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayDone — Uji Coba Login Google OAuth (M4)</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 720px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    h1 {
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #1e293b;
+    }
+    p {
+      color: #64748b;
+      font-size: 14px;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+    .btn-danger:hover {
+      background: #fecaca;
+    }
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      overflow-x: auto;
+      max-height: 350px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #475569;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>DayDone — Alat Uji Login Google Identity Services (M4)</h1>
+    <p>Halaman uji coba lokal untuk alur otorisasi kode (GIS popup), rotasi sesi web (cookie HttpOnly), dan logout.</p>
+
+    <div class="form-group">
+      <label for="clientId">Google Web Client ID</label>
+      <input type="text" id="clientId" placeholder="xxxx.apps.googleusercontent.com" />
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" id="loginBtn">1. Login dengan Google (GIS Popup)</button>
+      <button class="btn-secondary" id="meBtn" disabled>2. GET /auth/me</button>
+      <button class="btn-secondary" id="refreshBtn" disabled>3. POST /auth/refresh</button>
+      <button class="btn-danger" id="logoutBtn" disabled>4. POST /auth/logout</button>
+    </div>
+
+    <div>
+      Status Token Akses: <span id="authStatus" class="badge">Belum Login</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h1>Log Aktivitas & Respon Server</h1>
+    <pre id="outputLog">// Log respon akan tampil di sini...</pre>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api/v1';
+    let currentAccessToken = null;
+
+    const clientIdInput = document.getElementById('clientId');
+    const loginBtn = document.getElementById('loginBtn');
+    const meBtn = document.getElementById('meBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const authStatus = document.getElementById('authStatus');
+    const outputLog = document.getElementById('outputLog');
+
+    // Muat client ID tersimpan di localStorage browser (tidak pernah ter-commit)
+    const savedClientId = localStorage.getItem('daydone_test_client_id');
+    if (savedClientId) {
+      clientIdInput.value = savedClientId;
+    }
+
+    clientIdInput.addEventListener('input', (e) => {
+      localStorage.setItem('daydone_test_client_id', e.target.value.trim());
+    });
+
+    function log(title, data) {
+      const timestamp = new Date().toLocaleTimeString();
+      outputLog.textContent = `[${timestamp}] ${title}\n` + (typeof data === 'string' ? data : JSON.stringify(data, null, 2)) + '\n\n' + outputLog.textContent;
+    }
+
+    function updateAuthUI(token) {
+      currentAccessToken = token;
+      if (token) {
+        authStatus.textContent = 'Terautentikasi (Access Token Tersimpan di Memori)';
+        authStatus.className = 'badge badge-success';
+        meBtn.disabled = false;
+        refreshBtn.disabled = false;
+        logoutBtn.disabled = false;
+      } else {
+        authStatus.textContent = 'Belum Login / Telah Logout';
+        authStatus.className = 'badge';
+        meBtn.disabled = true;
+        refreshBtn.disabled = true;
+        logoutBtn.disabled = true;
+      }
+    }
+
+    // 1. Login dengan Google
+    loginBtn.addEventListener('click', () => {
+      const clientId = clientIdInput.value.trim();
+      if (!clientId) {
+        alert('Silakan masukkan Google Web Client ID terlebih dahulu!');
+        return;
+      }
+
+      if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+        alert('Google Identity Services SDK sedang dimuat, coba sebentar lagi...');
+        return;
+      }
+
+      const client = google.accounts.oauth2.initCodeClient({
+        client_id: clientId,
+        scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
+        ux_mode: 'popup',
+        callback: async (response) => {
+          if (response.error) {
+            log('Google OAuth Error', response);
+            return;
+          }
+
+          log('Google Auth Code Diterima', { code: response.code.slice(0, 15) + '...' });
+
+          try {
+            const res = await fetch(`${API_BASE}/auth/google`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include', // penting untuk menerima cookie daydone_rt
+              body: JSON.stringify({
+                code: response.code,
+                platform: 'WEB',
+                redirectUri: 'postmessage',
+              }),
+            });
+
+            const body = await res.json();
+            log(`POST /auth/google -> ${res.status}`, body);
+
+            if (res.ok && body.accessToken) {
+              updateAuthUI(body.accessToken);
+            }
+          } catch (err) {
+            log('Gagal menghubungi backend DayDone', err.message);
+          }
+        },
+      });
+
+      client.requestCode();
+    });
+
+    // 2. GET /auth/me
+    meBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${currentAccessToken}`,
+          },
+          credentials: 'include',
+        });
+        const body = await res.json();
+        log(`GET /auth/me -> ${res.status}`, body);
+      } catch (err) {
+        log('Gagal memanggil /auth/me', err.message);
+      }
+    });
+
+    // 3. POST /auth/refresh
+    refreshBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'daydone-web', // Proteksi CSRF
+          },
+          credentials: 'include', // Mengirimkan cookie daydone_rt
+          body: JSON.stringify({}),
+        });
+        const body = await res.json();
+        log(`POST /auth/refresh -> ${res.status}`, body);
+
+        if (res.ok && body.accessToken) {
+          updateAuthUI(body.accessToken);
+        }
+      } catch (err) {
+        log('Gagal memanggil /auth/refresh', err.message);
+      }
+    });
+
+    // 4. POST /auth/logout
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'daydone-web', // Proteksi CSRF
+          },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        });
+        log(`POST /auth/logout -> ${res.status}`, res.status === 204 ? 'Logout Berhasil (Cookie Dihapus)' : await res.json());
+        updateAuthUI(null);
+      } catch (err) {
+        log('Gagal memanggil /auth/logout', err.message);
+      }
+    });
+  </script>
+</body>
+</html>
