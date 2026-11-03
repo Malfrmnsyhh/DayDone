@@ -7,6 +7,7 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
+    "test:e2e": "pnpm -r run test:e2e",
     "format": "pnpm -r run format"
   },
   "keywords": [],
