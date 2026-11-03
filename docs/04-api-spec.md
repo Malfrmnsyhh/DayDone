@@ -132,9 +132,9 @@ Response `200`: sama dengan `/auth/google` tanpa field `user`. Refresh token lam
 
 Error: `401 SESSION_EXPIRED`.
 
-### `POST /auth/logout`
+### `POST /auth/logout` — Publik
 
-Mencabut sesi saat ini. Mobile mengirim `{ "refreshToken": "..." }`; web memakai cookie dan cookie dihapus. Response `204`.
+Mencabut sesi saat ini berdasarkan refresh token (bisa dilakukan meski access token kedaluwarsa). Mobile mengirim `{ "refreshToken": "..." }`; web memakai cookie dan cookie dihapus dengan atribut path/sameSite/secure yang sama. Request web wajib menyertakan header `X-Requested-With: daydone-web`. Response `204`.
 
 ### `GET /auth/me`
 
