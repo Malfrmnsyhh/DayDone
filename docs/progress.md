@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 3 November 2026 (penyelesaian Milestone M4)
+**Terakhir diperbarui:** 3 November 2026 (penyelesaian Milestone M5)
 
 ## Status per milestone
 
@@ -13,7 +13,8 @@
 | M2 Konfigurasi dan database | Selesai |
 | M3 Logbook di database | Selesai |
 | M4 Autentikasi Google + sesi | Selesai |
-| M5 – M9 | Belum dimulai |
+| M5 Google Drive dan lampiran | Selesai |
+| M6 – M9 | Belum dimulai |
 
 ## Detail
 
@@ -58,21 +59,42 @@
 - [x] M4-5 `JwtAuthGuard` global (`APP_GUARD`) dengan algoritma `HS256` eksplisit dan verifikasi sesi aktif di database. Decorator `@CurrentUser()` mengembalikan `{ userId, sessionId }`. `DevAuthGuard` dihapus total.
 - [x] M4-6 Halaman uji interaktif di `apps/api/tools/google-login-test/index.html` menggunakan Google Identity Services (GIS popup) diverifikasi langsung oleh pemilik menggunakan akun Google sungguhan (login Google popup, inspeksi profil `/auth/me`, rotasi token cookie `/auth/refresh`, pencabutan seluruh sesi pada deteksi reuse, dan logout membersihkan cookie terkonfirmasi sukses).
 - [x] M4-7 Rate limiting `@nestjs/throttler` (global 100/menit, `/auth/*` 10/menit) dengan `AppThrottlerGuard` yang fleksibel untuk pengujian. Unit test (91 tests) dan E2E test (33 tests) lolos 100%.
-- [x] M4-Refinements (Penyelarasan Kontrak & Uji Manual):
+- [x] M4-Refinements (Penyelarasan Kontrak & Uji Manual):   
   - Penyelarasan status HTTP `POST /auth/google` dan `POST /auth/refresh` ke `200 OK` (`@HttpCode(HttpStatus.OK)`) sesuai `docs/04-api-spec.md`.
   - Penambahan field standar `error` (e.g. `"Conflict"`, `"Unauthorized"`) pada `DomainException` sesuai format error `docs/04-api-spec.md` + unit test.
   - Sentralisasi opsi Set-Cookie `daydone_rt` (`path: '/api/v1/auth'`, `httpOnly`, `sameSite`, `secure`, `maxAge`) via helper `getCookieOptions()` untuk memastikan pergantian cookie konsisten di browser tanpa duplikasi.
   - Pengujian E2E refresh berturut-turut pada web (`login -> refresh -> refresh lagi dengan cookie yang baru dirotasi -> keduanya 200`).
 
+### M5
+- [x] M5-1 Interface `StorageProvider` (`src/storage/storage.interface.ts`) + `InMemoryStorageProvider` untuk pengujian unit & E2E tanpa ketergantungan Google API.
+- [x] M5-2 `GoogleDriveStorage` (`src/storage/google-drive.storage.ts`): autentikasi per user menggunakan refresh token yang didekripsi AES-256-GCM, retry backoff eksponensial (429/5xx), dan pemetaan error aman (`invalid_grant` -> 409 `DRIVE_RECONNECT_REQUIRED`, kuota penuh -> 507 `DRIVE_STORAGE_FULL`, fallback -> 502 `DRIVE_UNAVAILABLE`).
+- [x] M5-3 `ensureAppFolder`: pembuatan folder aplikasi "DayDone" otomatis saat login pertama dan sebelum unggah. Aman terhadap race condition paralel via update kondisional (`updateMany({ where: { id, driveFolderId } })`). Jika folder di Drive dipindah ke Trash (`files.get` trashed: true) atau 404, sistem otomatis membuat folder baru.
+- [x] M5-4 `ImageProcessorService` (`src/attachments/image-processor.service.ts`): konkurensi dibatasi `pLimit(2)`, auto-rotate EXIF orientation, resize batas dalam 2048x2048 px (`withoutEnlargement: true`), stripping seluruh EXIF metadata (termasuk koordinat GPS demi privasi), serta konversi pintar (PNG dipertahankan hanya bila memiliki transparansi `!isOpaque`, PNG opak dikonversi ke JPEG mozjpeg q82).
+- [x] M5-5 Signed URL HMAC-SHA256 (`src/attachments/signed-url.service.ts`): URL bertanda tangan berumur 5 menit dengan verifikasi `timingSafeEqual` dan proteksi replay attack.
+- [x] M5-6 `POST /logs/:id/attachments` (`src/attachments/attachments.service.ts`): alur all-or-nothing (validasi driveStatus -> validasi batas total <= 5 foto -> proses semua file via Sharp -> unggah Drive -> simpan DB dalam transaksi; kompensasi trash otomatis di Drive bila ada kegagalan).
+- [x] M5-7 Endpoint konten publik bertanda tangan `GET /attachments/:id/content?token=...` (`StreamableFile`, `Cache-Control: private, max-age=300`, `X-Content-Type-Options: nosniff`) dan `GET /attachments/:id/url`.
+- [x] M5-8 `DELETE /attachments/:id`: hapus lampiran dari database, rapikan kembali urutan nomor posisi (`position`), dan pindahkan file ke Trash Google Drive. Penghapusan logbook (`DELETE /logs/:id`) otomatis memindahkan seluruh file lampirannya ke Trash.
+- [x] M5-9 `DELETE /users/me`: hapus akun pengguna permanen dengan konfirmasi `{ confirm: "HAPUS" }`, cabut token Google best-effort, cascade delete di database, dan hapus cookie sesi web tanpa menghapus file di Google Drive.
+- [x] M5-Uji Manual Fase B (Verifikasi langsung oleh pemilik proyek dengan Google Drive sungguhan):
+  - a. Foto kamera HP (resize + GPS hilang): OK
+  - b. URL setelah 5 menit -> 401 Unauthorized: OK
+  - c. Hapus foto -> file berpindah ke Trash Google Drive: OK
+  - d. Cabut akses di Google -> 409 `DRIVE_RECONNECT_REQUIRED` -> login ulang memulihkan sesi: OK
+  - e1. Folder dipindah ke Trash -> terdeteksi `files.get` id,trashed -> folder baru otomatis dibuat: OK
+  - e2. Folder dihapus permanen -> 404 -> folder otomatis dibuat ulang saat unggah: OK
+  - f. Validasi file (file ke-6 tolak 409 / file > 10 MB tolak 413 / bukan gambar tolak 415): OK
+  - g. Hapus logbook berfoto -> seluruh file terkait di Google Drive berpindah ke Trash: OK
+  - h. Hapus akun penguji (`DELETE /users/me`): OK
+
 ## Task berikutnya untuk agent
 
-1. Mulai **M5 (Integrasi Google Drive & Lampiran)**:
-   - **M5-1**: Setup storage abstraction (`StorageProvider` interface) & Google Drive API client wrapper.
-   - **M5-2**: `ensureAppFolder` untuk membuat folder aplikasi `DayDone` di Drive user saat pertama kali terhubung.
-   - **M5-3**: Pemrosesan gambar dengan `sharp`: autorotate EXIF, resize max 2048px, strip metadata, kompres JPEG kualitas 82.
-   - **M5-4**: Endpoint `POST /logs/:id/attachments` (upload multipart/form-data, max 5 foto per logbook, validasi MIME/magic bytes).
-   - **M5-5**: Endpoint `GET /attachments/:id/content` dengan signed URL HMAC-SHA256 berumur 5 menit.
-   - **M5-6**: Soft-delete foto (pindah ke Trash Google Drive).
+1. Mulai **M6 (Pengerasan Backend)**:
+   - **M6-1**: `helmet`, throttler global, CORS dengan daftar origin dari env.
+   - **M6-2**: Swagger di `/api/docs` (non-produksi).
+   - **M6-3**: Logging terstruktur dengan request id, redaksi data sensitif.
+   - **M6-4**: CI GitHub Actions sesuai `docs/08-testing.md`.
+   - **M6-5**: Dockerfile API (multi-stage, `prisma generate` saat build, `migrate deploy` saat release).
+   - **M6-6**: Deploy API staging (Render/Railway, region Singapura).
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -92,7 +114,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 
 - 2026-11-02 — Satu logbook per hari (`@@unique([userId, date])`) — kebutuhan umum logbook magang; dapat ditinjau ulang (PRD Q2).
 - 2026-11-02 — Upload foto lewat API untuk MVP — lebih sederhana; API tidak di Vercel jadi tidak terkena batas body 4,5 MB.
-- 2026-11-02 — Route `by-date/:date` diletakkan sebelum `:id` di `LogsController` — mencegah path static 'by-date' ditangkap oleh route parameter `:id` yang divalidasi `ParseUUIDPipe`.
+- 2026-11-02 — Route `by-date/:date` diletakkan sebelum `:id` di `LogsController` — secara teknis NestJS dapat membedakannya karena jumlah segmen path berbeda (`/logs/by-date/:date` 2 segmen vs `/logs/:id` 1 segmen), namun urutan ini tetap dipertahankan demi keterbacaan kode dan konsistensi struktur rute.
 - 2026-11-03 — RLS diaktifkan tanpa policy pada tabel (`users`, `sessions`, `log_entries`, `attachments`) — memblokir akses langsung PostgREST publik Supabase dengan anon key; Prisma tetap jalan karena terhubung sebagai role superuser/owner `postgres`.
 - 2026-11-03 — Perintah seeder di Prisma 7 dikonfigurasi pada `prisma.config.ts` di bawah properti `migrations.seed` menggunakan runner `tsx prisma/seed.ts` agar import ESM `.js` terpetakan secara otomatis ke file TypeScript.
 - 2026-11-03 — Penanganan P2002 untuk duplikat tanggal ditangani khusus di `LogsService` (bukan filter global biasa), sehingga API dapat mengembalikan `code: "LOG_DATE_CONFLICT"` beserta payload `"existingLogId"` yang spesifik sesuai kontrak `docs/04-api-spec.md`.
@@ -104,6 +126,9 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-03 — Throttler rate limiting pada testing dinonaktifkan secara selektif via `AppThrottlerGuard.shouldSkip()` kecuali pada test khusus yang memverifikasi respon 429 (`THROTTLER_FORCE_ENABLED=true`), menjaga suite e2e tetap deterministik tanpa jeda waktu buatan.
 - 2026-11-03 — Penyelarasan status response Auth ke 200 OK dan ekstraksi helper cookie `getCookieOptions()` — memastikan atribut Set-Cookie identik pada saat login dan refresh sehingga browser me-replace cookie secara bersih, serta memenuhi kontrak `docs/04-api-spec.md`.
 - 2026-11-03 — Penyertaan field `error` pada `DomainException` — menyelaraskan struktur payload JSON error domain dengan format resmi HttpException NestJS dan `docs/04-api-spec.md`.
+- 2026-11-03 — Pemrosesan PNG di `ImageProcessorService`: format PNG dipertahankan hanya bila gambar benar-benar memiliki piksel transparan (`!stats.isOpaque`). PNG opak (RGBA dengan 100% opacity) dikonversi ke JPEG mozjpeg kualitas 82 demi penghematan ukuran file dan kuota Google Drive.
+- 2026-11-03 — Verifikasi folder Google Drive sebelum unggah: memeriksa bahwa folder aplikasi ada dan tidak berstatus trashed (`files.get` fields `id,trashed`). Bila trashed atau 404, dibuat folder baru otomatis dengan pembaruan bersyarat untuk menghindari konflik konkurensi.
+- 2026-11-03 — Penyeragaman DTO `AttachmentResponse`: menghilangkan properti `createdAt` dari response `POST /logs/:id/attachments` agar bentuknya konsisten 100% dengan objek lampiran pada `GET /logs` dan `GET /logs/:id` sesuai kontrak `docs/04-api-spec.md`.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
@@ -123,3 +148,29 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 
 5. **Penggantian Guard Global ke `JwtAuthGuard` (`src/auth/guards/jwt-auth.guard.ts`)**:
    - `DevAuthGuard` sementara kini telah digantikan oleh `JwtAuthGuard` resmi. Setiap request yang masuk ke endpoint terlindungi memverifikasi tanda tangan kriptografis JWT sekaligus memastikan status sesi di database masih aktif (`revokedAt === null`).
+
+6. **File Interceptor & Multer Exception Filter (`src/logs/logs.controller.ts`, `src/common/filters/multer-exception.filter.ts`)**:
+   - NestJS mengintegrasikan Multer melalui decorator `@UseInterceptors(FilesInterceptor('files', 5, { storage: memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }))`.
+   - File foto disimpan di memori RAM sebagai `Buffer` (bukan disk fisik server), menjadikan aplikasi stateless dan siap di-deploy ke container serverless.
+   - Error bawaan Multer (seperti `LIMIT_FILE_SIZE` atau `LIMIT_FILE_COUNT`) otomatis ditangkap oleh filter global `MulterExceptionFilter` dan diubah menjadi response standar DayDone (`413 FILE_TOO_LARGE` atau `409 ATTACHMENT_LIMIT_REACHED`).
+
+7. **StreamableFile & Streaming Media (`src/attachments/attachments.controller.ts`)**:
+   - Saat browser memuat gambar melalui signed URL, API tidak membaca seluruh file ke memori Node.js sebelum mengirimkannya. Sebaliknya, API menggunakan `StreamableFile(Readable)` untuk mengalirkan (*pipe*) stream biner langsung dari Google Drive ke koneksi HTTP client.
+   - Header keamanan ditambahkan secara otomatis: `Cache-Control: private, max-age=300` (cache privat 5 menit) dan `X-Content-Type-Options: nosniff` (mencegah browser mengeksekusi file sebagai script).
+
+8. **Abstraksi Storage & Token Injeksi (`src/storage/storage.interface.ts`, `src/storage/storage.module.ts`)**:
+   - Menerapkan prinsip *Dependency Inversion* (SOLID). Modul bisnis (`LogsModule` & `AttachmentsModule`) tidak memanggil library `@googleapis/drive` secara langsung, melainkan bergantung pada interface `StorageProvider` melalui token injeksi `STORAGE_PROVIDER`.
+   - Hal ini memungkinkan sistem pengujian berjalan 100% deterministik dan super cepat menggunakan `InMemoryStorageProvider`, tanpa perlu koneksi internet atau akun Google Drive sungguhan.
+
+9. **Signed URL HMAC-SHA256 Berumur Pendek (`src/attachments/signed-url.service.ts`)**:
+   - Tag HTML `<img>` di browser tidak dapat mengirim header kustom `Authorization: Bearer <token>`.
+   - Untuk mengamankan akses file tanpa membuat file menjadi publik, server membuat URL bertanda tangan kriptografis berumur 5 menit: `token = base64url(payload) + "." + base64url(HMAC)`.
+   - Verifikasi token memvalidasi integritas HMAC menggunakan `crypto.timingSafeEqual` untuk mencegah *timing attack*, serta memastikan waktu kedaluwarsa belum lewat.
+
+10. **Pola Kompensasi (All-or-Nothing Saga) (`src/attachments/attachments.service.ts`)**:
+    - Operasi unggah melibatkan dua sistem terpisah: Google Drive dan PostgreSQL. Karena Google Drive tidak mendukung transaksi database ACID, kegagalan di tengah jalan (misal file ke-3 gagal diproses atau insert database error) ditangani dengan pola kompensasi: seluruh file yang sudah terlanjur terunggah ke Drive otomatis dipindahkan ke Trash (`storageProvider.trash()`), mencegah timbulnya file sampah yatim piatu (*orphan files*).
+
+11. **Pembaruan Bersyarat untuk Menghindari Race Condition (`src/storage/google-drive.storage.ts`)**:
+    - Saat membuat folder aplikasi pertama kali atau membuat ulang folder yang terhapus/di-trash, beberapa request paralel dapat berjalan bersamaan.
+    - Masalah ini diatasi menggunakan pembaruan bersyarat Prisma: `updateMany({ where: { id: userId, driveFolderId: oldFolderId }, data: { driveFolderId: newFolderId } })`.
+    - Hanya request yang memenangkan balapan yang mendapat `count === 1`. Request lain yang mendapat `count === 0` langsung memindahkan folder buatannya ke Trash dan memakai folder yang sudah tersimpan di database.
