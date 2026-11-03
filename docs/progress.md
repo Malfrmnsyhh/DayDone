@@ -56,8 +56,13 @@
   - `POST /auth/logout`: `@Public()` diidentifikasi via refresh token (tetap bisa logout saat access token kedaluwarsa), membersihkan cookie dengan atribut path/sameSite/secure yang identik.
   - `GET /auth/me`: mengembalikan profil pengguna terautentikasi.
 - [x] M4-5 `JwtAuthGuard` global (`APP_GUARD`) dengan algoritma `HS256` eksplisit dan verifikasi sesi aktif di database. Decorator `@CurrentUser()` mengembalikan `{ userId, sessionId }`. `DevAuthGuard` dihapus total.
-- [x] M4-6 Halaman uji interaktif di `apps/api/tools/google-login-test/index.html` menggunakan Google Identity Services (GIS popup) untuk verifikasi login, me, refresh, dan logout secara nyata.
-- [x] M4-7 Rate limiting `@nestjs/throttler` (global 100/menit, `/auth/*` 10/menit) dengan `AppThrottlerGuard` yang fleksibel untuk pengujian. Unit test (89 tests) dan E2E test (32 tests) lolos 100%.
+- [x] M4-6 Halaman uji interaktif di `apps/api/tools/google-login-test/index.html` menggunakan Google Identity Services (GIS popup) diverifikasi langsung oleh pemilik menggunakan akun Google sungguhan (login Google popup, inspeksi profil `/auth/me`, rotasi token cookie `/auth/refresh`, pencabutan seluruh sesi pada deteksi reuse, dan logout membersihkan cookie terkonfirmasi sukses).
+- [x] M4-7 Rate limiting `@nestjs/throttler` (global 100/menit, `/auth/*` 10/menit) dengan `AppThrottlerGuard` yang fleksibel untuk pengujian. Unit test (91 tests) dan E2E test (33 tests) lolos 100%.
+- [x] M4-Refinements (Penyelarasan Kontrak & Uji Manual):
+  - Penyelarasan status HTTP `POST /auth/google` dan `POST /auth/refresh` ke `200 OK` (`@HttpCode(HttpStatus.OK)`) sesuai `docs/04-api-spec.md`.
+  - Penambahan field standar `error` (e.g. `"Conflict"`, `"Unauthorized"`) pada `DomainException` sesuai format error `docs/04-api-spec.md` + unit test.
+  - Sentralisasi opsi Set-Cookie `daydone_rt` (`path: '/api/v1/auth'`, `httpOnly`, `sameSite`, `secure`, `maxAge`) via helper `getCookieOptions()` untuk memastikan pergantian cookie konsisten di browser tanpa duplikasi.
+  - Pengujian E2E refresh berturut-turut pada web (`login -> refresh -> refresh lagi dengan cookie yang baru dirotasi -> keduanya 200`).
 
 ## Task berikutnya untuk agent
 
@@ -97,6 +102,8 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-03 — Endpoint `POST /auth/logout` dijadikan `@Public()` dan diidentifikasi via refresh token (cookie atau body) agar pengguna tetap bisa logout dengan aman meskipun token akses JWT telah kedaluwarsa.
 - 2026-11-03 — Enkripsi refresh token Google menggunakan format `v1.<iv>.<tag>.<ciphertext>` dengan AES-256-GCM diletakkan pada `src/common/crypto/` agar dapat digunakan bersama oleh modul Storage di M5.
 - 2026-11-03 — Throttler rate limiting pada testing dinonaktifkan secara selektif via `AppThrottlerGuard.shouldSkip()` kecuali pada test khusus yang memverifikasi respon 429 (`THROTTLER_FORCE_ENABLED=true`), menjaga suite e2e tetap deterministik tanpa jeda waktu buatan.
+- 2026-11-03 — Penyelarasan status response Auth ke 200 OK dan ekstraksi helper cookie `getCookieOptions()` — memastikan atribut Set-Cookie identik pada saat login dan refresh sehingga browser me-replace cookie secara bersih, serta memenuhi kontrak `docs/04-api-spec.md`.
+- 2026-11-03 — Penyertaan field `error` pada `DomainException` — menyelaraskan struktur payload JSON error domain dengan format resmi HttpException NestJS dan `docs/04-api-spec.md`.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
