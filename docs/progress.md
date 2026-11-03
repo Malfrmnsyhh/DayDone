@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 3 November 2026 (penyelesaian Milestone M2)
+**Terakhir diperbarui:** 3 November 2026 (penyelesaian Milestone M3)
 
 ## Status per milestone
 
@@ -11,7 +11,8 @@
 | M0 Fondasi monorepo | Selesai |
 | M1 CRUD logbook di memori | Selesai |
 | M2 Konfigurasi dan database | Selesai |
-| M3 – M9 | Belum dimulai |
+| M3 Logbook di database | Selesai |
+| M4 – M9 | Belum dimulai |
 
 ## Detail
 
@@ -35,16 +36,24 @@
 - [x] M2-6 Seed user dev (2 user dev: `dev-a`, `dev-b`) dan 10 logbook (`prisma db seed` berhasil dan terverifikasi)
 - [x] M2-7 `docker-compose.yml` di root dengan service `postgres-test` (port 5433)
 
+### M3
+- [x] M3-1 `DevAuthGuard` sementara (`X-Dev-User-Email`) aktif hanya saat `DEV_AUTH_ENABLED=true` di lingkungan development & test. Decorator `@Public()` untuk bypass autentikasi pada endpoint publik, decorator `@CurrentUser()` untuk injeksi user ke controller.
+- [x] M3-2 Refaktor `LogsService` dari in-memory ke database via Prisma. Semua operasi wajib menerima `userId` dan di-scope ketat. Menggunakan `findFirst({ where: { id, userId } })`, data milik user lain dibalas `404 Not Found`.
+- [x] M3-3 Paginasi `page` (default 1) dan `limit` (1–100, default 20) dengan penghitungan `totalPages` di database via `$transaction([count, findMany])`. Filter `from`, `to` (validasi `from <= to`), dan `search` deskripsi case-insensitive. Validasi tanggal tolak lebih dari 1 hari di masa depan (+1 hari UTC server).
+- [x] M3-4 Endpoint `GET /logs/by-date/:date` via Prisma memanfaatkan unique composite key `userId_date`.
+- [x] M3-5 `DomainException` dan enum `ErrorCode` lengkap (`docs/04-api-spec.md`). `PrismaExceptionFilter` global (P2002 -> 409 generik, P2025 -> 404). Duplikasi tanggal logbook ditangani khusus di `LogsService` dengan mengembalikan error code `LOG_DATE_CONFLICT` dan field `existingLogId`.
+- [x] M3-6 Response mapper `toLogResponse` dan `toLogListItemResponse`: memformat tanggal menjadi `YYYY-MM-DD`, menyembunyikan ID internal `userId`, dan menyertakan `attachmentCount`.
+- [x] M3-7 Unit test lengkap (52 tests) dan E2E test (19 tests) dengan isolasi database lokal Docker (`localhost:5433`) yang diverifikasi oleh `db-safety-guard.ts`.
+
 ## Task berikutnya untuk agent
 
-1. Mulai **M3 (Logbook di database)**:
-   - **M3-1**: `DevAuthGuard` sementara + decorator `@CurrentUser()`.
-   - **M3-2**: Refactor `LogsService` dari in-memory ke Prisma, di-scoped dengan `userId` dari request.
-   - **M3-3**: Paginasi (`page`, `limit`) + `meta`, validasi `from <= to`, batas tanggal masa depan.
-   - **M3-4**: Endpoint `GET /logs/by-date/:date` via Prisma.
-   - **M3-5**: `DomainException`, daftar `ErrorCode`, filter error Prisma global (duplikat tanggal -> 409 `LOG_DATE_CONFLICT` + `existingLogId`).
-   - **M3-6**: Response mapper (tanggal sebagai string `YYYY-MM-DD`, tanpa field internal).
-   - **M3-7**: Unit test & E2E test Logs lengkap (termasuk isolasi lintas pengguna dengan `dev-a` dan `dev-b`).
+1. Mulai **M4 (Autentikasi Google OAuth & Sesi)**:
+   - **M4-1**: `EncryptionService` (AES-256-GCM) untuk mengenkripsi refresh token Google sebelum disimpan di database.
+   - **M4-2**: Setup Google OAuth client & token verification di backend.
+   - **M4-3**: Endpoint `POST /auth/google` (tukar Google code dengan access token JWT + refresh token sesi).
+   - **M4-4**: Endpoint `POST /auth/refresh` (rotasi refresh token sesi).
+   - **M4-5**: Endpoint `POST /auth/logout` dan `GET /auth/me`.
+   - **M4-6**: Penggantian `DevAuthGuard` dengan `JwtAuthGuard` resmi.
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -66,21 +75,24 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-02 — Route `by-date/:date` diletakkan sebelum `:id` di `LogsController` — mencegah path static 'by-date' ditangkap oleh route parameter `:id` yang divalidasi `ParseUUIDPipe`.
 - 2026-11-03 — RLS diaktifkan tanpa policy pada tabel (`users`, `sessions`, `log_entries`, `attachments`) — memblokir akses langsung PostgREST publik Supabase dengan anon key; Prisma tetap jalan karena terhubung sebagai role superuser/owner `postgres`.
 - 2026-11-03 — Perintah seeder di Prisma 7 dikonfigurasi pada `prisma.config.ts` di bawah properti `migrations.seed` menggunakan runner `tsx prisma/seed.ts` agar import ESM `.js` terpetakan secara otomatis ke file TypeScript.
+- 2026-11-03 — Penanganan P2002 untuk duplikat tanggal ditangani khusus di `LogsService` (bukan filter global biasa), sehingga API dapat mengembalikan `code: "LOG_DATE_CONFLICT"` beserta payload `"existingLogId"` yang spesifik sesuai kontrak `docs/04-api-spec.md`.
+- 2026-11-03 — Batas toleransi tanggal logbook masa depan dihitung dinamis di dalam `.refine()` pada saat validasi dieksekusi (bukan konstanta tingkat modul) untuk menjamin akurasi waktu server dan toleransi zona waktu UTC + 1 hari.
+- 2026-11-03 — Guard keselamatan database lokal (`db-safety-guard.ts`): seluruh skrip tes E2E dan operasi reset diproteksi keras dari eksekusi ke database non-localhost atau host Supabase untuk mencegah insiden penghapusan data produksi.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
-1. **`ConfigModule` dan Validasi Lingkungan Terpusat (`src/config/env.schema.ts`)**:
-   - NestJS `@nestjs/config` memuat variabel dari `.env`. Dengan menambahkan validator berbasis Zod (`validateEnv`), aplikasi akan *fail-fast* (langsung berhenti saat start) jika variabel penting seperti `DATABASE_URL` atau `DIRECT_URL` tidak ada atau salah format, sehingga mencegah runtime error tersembunyi.
+1. **Guard Global dan Decorator Kustom (`src/auth/dev-auth.guard.ts`)**:
+   - `APP_GUARD` di daftarkan pada `AppModule` sebagai penyaring request global. Untuk mengecualikan endpoint publik seperti `/health`, kita membuat metadata kustom `@Public()` menggunakan `SetMetadata` dan dibaca oleh Guard via `Reflector`.
+   - Decorator `@CurrentUser()` dibuat menggunakan `createParamDecorator` untuk mengekstrak objek user yang telah divalidasi dan ditempelkan pada `request.user` oleh Guard, sehingga controller tidak perlu membaca `req` mentah secara langsung.
 
-2. **Prisma 7 dengan Driver Adapter (`src/prisma/prisma.service.ts`)**:
-   - Berbeda dari Prisma 5/6, Prisma 7 menggunakan konfigurasi modern `prisma.config.ts` dan adapter PostgreSQL resmi (`@prisma/adapter-pg`). `PrismaClient` di-generate ke folder internal (`src/generated/prisma`) dan di-extend oleh `PrismaService` dengan `connectionString` dinamis dari `ConfigService`.
+2. **Hierarki Penanganan Error (`src/common/errors/` & `src/common/filters/`)**:
+   - NestJS membedakan exception bawaan framework (`NotFoundException`, `ConflictException`) dengan exception domain aplikasi (`DomainException`).
+   - `PrismaExceptionFilter` didaftarkan sebagai `APP_FILTER` untuk menangkap error Prisma (`P2002` duplicate key, `P2025` record not found) secara global dan memetakannya ke status HTTP yang sesuai tanpa mengekspos detail internal query ke client.
 
-3. **Alur Migrasi Database (`prisma/migrations/`)**:
-   - `prisma migrate dev --name init`: Membaca `schema.prisma`, membandingkannya dengan database Supabase, menghasilkan file SQL di `prisma/migrations/<timestamp>_init/migration.sql`, dan menerapkannya.
-   - `prisma migrate dev --create-only --name enable_rls`: Membuat file migrasi SQL kosong tanpa langsung mengeksekusinya, memungkinkan kita menulis SQL kustom (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) lalu menerapkannya dengan `prisma migrate dev`.
+3. **Data Scoping & Isolasi Antar-Pengguna di Database**:
+   - Pada aplikasi multi-tenant / multi-user, keamanan data pengguna ditentukan di query layer. Seluruh query `findFirst`, `findMany`, dan compound index `userId_date` selalu menyertakan `userId` dari token pengguna.
+   - Jika pengguna meminta ID data yang bukan miliknya, server membalas dengan `404 Not Found` (bukan `403 Forbidden`). Ini adalah praktik keamanan terbaik agar penyerang tidak dapat melakukan enumerasi / mendeteksi keberadaan resource pengguna lain (*resource existence leakage*).
 
-4. **Seeding Idempoten (`prisma/seed.ts`)**:
-   - Seeder menggunakan metode `.upsert({ where, update, create })` sehingga script aman dijalankan berulang kali tanpa membuat duplikasi data. Seeder juga dilengkapi pengecekan `NODE_ENV === 'production'` untuk mencegah kecelakaan penimpaan data di lingkungan produksi.
-
-5. **Health Check Terintegrasi Database (`src/health/health.controller.ts`)**:
-   - Endpoint `GET /api/v1/health` kini mengeksekusi `SELECT 1` lewat `prisma.$queryRaw`. Bila database aktif, respons HTTP 200 `{ status: "ok", database: "up" }`. Jika koneksi terputus, controller melempar `ServiceUnavailableException` (HTTP 503) dengan payload `{ status: "error", database: "down" }`.
+4. **Testing E2E Terisolasi dengan Docker PostgreSQL**:
+   - Pengujian E2E (`apps/api/test/logs.e2e-spec.ts`) berjalan langsung ke instance PostgreSQL nyata di Docker port 5433 menggunakan `dotenv-cli` (`.env.test`).
+   - Menguji aplikasi secara end-to-end melalui HTTP Supertest membuktikan bahwa seluruh rantai request — mulai dari Middleware, Guard, Validation Pipe, Controller, Service, hingga Constraint Unik Database PostgreSQL — berfungsi harmonis sesuai spesifikasi API.
