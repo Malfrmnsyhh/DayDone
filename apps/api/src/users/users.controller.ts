@@ -11,7 +11,7 @@ import type { Response } from 'express';
 import {
   CurrentUser,
   type CurrentUserData,
-} from '../auth/decorators/current-user.decorator.js';
+} from '../common/decorators/current-user.decorator.js';
 import {
   deleteUserSchema,
   type DeleteUserDto,
@@ -56,3 +56,4 @@ export class UsersController {
     });
   }
 }
+

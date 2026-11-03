@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   HttpStatus,
   NotFoundException,
   UnauthorizedException,
@@ -301,3 +300,4 @@ describe('AttachmentsService', () => {
     });
   });
 });
+

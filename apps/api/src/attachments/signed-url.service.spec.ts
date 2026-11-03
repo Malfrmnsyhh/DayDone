@@ -66,3 +66,4 @@ describe('SignedUrlService', () => {
     expect(service.verifyToken('part1.part2.part3')).toBeNull();
   });
 });
+

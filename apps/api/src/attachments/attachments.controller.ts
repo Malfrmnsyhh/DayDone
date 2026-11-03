@@ -11,11 +11,11 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Public } from '../auth/decorators/public.decorator.js';
+import { Public } from '../common/decorators/public.decorator.js';
 import {
   CurrentUser,
   type CurrentUserData,
-} from '../auth/decorators/current-user.decorator.js';
+} from '../common/decorators/current-user.decorator.js';
 import { AttachmentsService } from './attachments.service.js';
 import type { AttachmentUrlResponse } from './dto/attachment.types.js';
 
@@ -68,3 +68,4 @@ export class AttachmentsController {
     await this.attachmentsService.deleteAttachment(user.userId, id);
   }
 }
+

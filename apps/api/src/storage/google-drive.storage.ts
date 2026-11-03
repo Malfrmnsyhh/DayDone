@@ -118,16 +118,23 @@ export class GoogleDriveStorage implements StorageProvider {
 
     const error = err as Record<string, unknown>;
     const status = (error.status ?? (error.response as Record<string, unknown>)?.status) as number | undefined;
-    const message = String(error.message || '');
+    const message = typeof error.message === 'string' ? error.message : '';
     const responseData = (error.response as Record<string, unknown>)?.data as Record<string, unknown> | undefined;
     const errorData = (responseData?.error as Record<string, unknown>) || {};
-    const errorCodeString = String(errorData.error || error.error || '');
+    const errorCodeString =
+      typeof errorData.error === 'string'
+        ? errorData.error
+        : typeof error.error === 'string'
+          ? error.error
+          : '';
+    const errorDataMessage =
+      typeof errorData.message === 'string' ? errorData.message : '';
 
     // 1. invalid_grant (token kedaluwarsa atau dicabut di Google)
     if (
       message.includes('invalid_grant') ||
       errorCodeString === 'invalid_grant' ||
-      String(errorData.message || '').includes('invalid_grant')
+      errorDataMessage.includes('invalid_grant')
     ) {
       this.logger.warn(`Google Drive invalid_grant untuk user ${userId}, menandai NEEDS_RECONNECT`);
 
@@ -351,8 +358,13 @@ export class GoogleDriveStorage implements StorageProvider {
         return;
       }
 
-      this.logger.warn(`Gagal memindahkan file ${driveFileId} ke trash di Drive: ${String(error.message)}`);
+      const trashErrorMsg =
+        typeof error.message === 'string' ? error.message : '';
+      this.logger.warn(
+        `Gagal memindahkan file ${driveFileId} ke trash di Drive: ${trashErrorMsg}`,
+      );
       // Hapus/trash file berstatus best-effort, tidak menggagalkan alur utama
     }
   }
 }
+

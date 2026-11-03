@@ -133,3 +133,4 @@ describe('ImageProcessorService', () => {
     expect(result.height).toBe(600);
   });
 });
+

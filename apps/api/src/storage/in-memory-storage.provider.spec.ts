@@ -78,3 +78,4 @@ describe('InMemoryStorageProvider', () => {
     ).rejects.toThrow(DomainException);
   });
 });
+

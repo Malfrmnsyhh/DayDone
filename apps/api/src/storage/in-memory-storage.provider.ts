@@ -105,7 +105,7 @@ export class InMemoryStorageProvider implements StorageProvider {
       // Hapus folder yang tersimpan agar upload berikutnya memicu pembuatan ulang
       this.userFolders.delete(userId);
       const notFoundError = new Error('File not found: folder');
-      (notFoundError as Record<string, unknown>).status = 404;
+      ((notFoundError as unknown) as Record<string, unknown>).status = 404;
       throw notFoundError;
     }
 
@@ -174,3 +174,4 @@ export class InMemoryStorageProvider implements StorageProvider {
     }
   }
 }
+

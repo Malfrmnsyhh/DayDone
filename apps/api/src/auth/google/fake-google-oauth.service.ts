@@ -47,6 +47,16 @@ export class FakeGoogleOAuthService implements GoogleOAuthService {
       driveGranted: false,
     });
 
+    // Default User C (khusus tes tanpa Drive agar tidak menimpa User A)
+    this.scenarios.set('code-dev-c-no-drive', {
+      googleId: 'google-dev-c',
+      email: 'dev-c@daydone.local',
+      name: 'Dev C',
+      avatarUrl: null,
+      refreshToken: 'fake-refresh-token-c',
+      driveGranted: false,
+    });
+
     // Default User B
     this.scenarios.set('code-dev-b', {
       googleId: 'google-dev-b',

@@ -41,7 +41,7 @@ describe('LogsService', () => {
     };
 
     mockAttachmentsService = {
-      buildAttachmentUrl: vi.fn((attId: string, uId: string) => ({
+      buildAttachmentUrl: vi.fn((attId: string, _uId: string) => ({
         url: `http://localhost:3000/api/v1/attachments/${attId}/content?token=abc`,
         urlExpiresAt: '2026-11-03T10:05:00.000Z',
       })),

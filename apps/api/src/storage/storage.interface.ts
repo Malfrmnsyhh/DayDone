@@ -35,3 +35,4 @@ export interface StorageProvider {
    */
   trash(userId: string, driveFileId: string): Promise<void>;
 }
+

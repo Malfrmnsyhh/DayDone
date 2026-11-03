@@ -1,10 +1,9 @@
-import { Module } from '@nestjs/common';
-import { CommonModule } from '../common/common.module.js';
+import { Global, Module } from '@nestjs/common';
 import { GoogleDriveStorage } from './google-drive.storage.js';
 import { STORAGE_PROVIDER } from './storage.interface.js';
 
+@Global()
 @Module({
-  imports: [CommonModule],
   providers: [
     GoogleDriveStorage,
     {
@@ -15,3 +14,4 @@ import { STORAGE_PROVIDER } from './storage.interface.js';
   exports: [STORAGE_PROVIDER, GoogleDriveStorage],
 })
 export class StorageModule {}
+

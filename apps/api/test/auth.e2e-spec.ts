@@ -10,6 +10,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { FakeGoogleOAuthService } from '../src/auth/google/fake-google-oauth.service.js';
 import { GOOGLE_OAUTH_SERVICE } from '../src/auth/google/google-oauth.interface.js';
+import { InMemoryStorageProvider } from '../src/storage/in-memory-storage.provider.js';
+import { STORAGE_PROVIDER } from '../src/storage/storage.interface.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { assertLocalDatabaseOnly } from './db-safety-guard.js';
 
@@ -28,6 +30,8 @@ describe('Auth & Session Management (e2e)', () => {
     })
       .overrideProvider(GOOGLE_OAUTH_SERVICE)
       .useValue(fakeGoogleService)
+      .overrideProvider(STORAGE_PROVIDER)
+      .useValue(new InMemoryStorageProvider())
       .compile();
 
     app = moduleFixture.createNestApplication();
