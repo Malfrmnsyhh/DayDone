@@ -21,8 +21,13 @@ describe('LogsService', () => {
     attachments: [],
   };
 
+  let mockAttachmentsService: any;
+
   beforeEach(() => {
     mockPrisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ driveStatus: 'CONNECTED' }),
+      },
       logEntry: {
         create: vi.fn(),
         findFirst: vi.fn(),
@@ -35,7 +40,18 @@ describe('LogsService', () => {
       $transaction: vi.fn(),
     };
 
-    service = new LogsService(mockPrisma as unknown as PrismaService);
+    mockAttachmentsService = {
+      buildAttachmentUrl: vi.fn((attId: string, uId: string) => ({
+        url: `http://localhost:3000/api/v1/attachments/${attId}/content?token=abc`,
+        urlExpiresAt: '2026-11-03T10:05:00.000Z',
+      })),
+      trashAttachmentsForLog: vi.fn().mockResolvedValue(undefined),
+    };
+
+    service = new LogsService(
+      mockPrisma as unknown as PrismaService,
+      mockAttachmentsService,
+    );
   });
 
   describe('create', () => {

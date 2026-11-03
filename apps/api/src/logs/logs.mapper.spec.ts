@@ -50,5 +50,45 @@ describe('Logs Mapper', () => {
 
     expect(res.attachmentCount).toBe(1);
   });
+
+  it('toLogResponse menyertakan URL bertanda tangan untuk seluruh lampiran bila buildUrl diberikan', () => {
+    const multiAttLog = {
+      ...dummyLog,
+      attachments: [
+        { ...dummyLog.attachments[0]!, id: 'att-1', position: 0 },
+        { ...dummyLog.attachments[0]!, id: 'att-2', position: 1 },
+      ],
+    };
+
+    const mockBuildUrl = (id: string) => ({
+      url: `https://api.daydone.local/attachments/${id}/content?token=abc`,
+      urlExpiresAt: '2026-11-03T10:05:00.000Z',
+    });
+
+    const res = toLogResponse(multiAttLog, mockBuildUrl);
+
+    expect(res.attachments[0]?.url).toBe('https://api.daydone.local/attachments/att-1/content?token=abc');
+    expect(res.attachments[1]?.url).toBe('https://api.daydone.local/attachments/att-2/content?token=abc');
+  });
+
+  it('toLogListItemResponse hanya menyertakan URL untuk lampiran pertama (thumbnail), sisanya null', () => {
+    const multiAttLog = {
+      ...dummyLog,
+      attachments: [
+        { ...dummyLog.attachments[0]!, id: 'att-1', position: 0 },
+        { ...dummyLog.attachments[0]!, id: 'att-2', position: 1 },
+      ],
+    };
+
+    const mockBuildUrl = (id: string) => ({
+      url: `https://api.daydone.local/attachments/${id}/content?token=abc`,
+      urlExpiresAt: '2026-11-03T10:05:00.000Z',
+    });
+
+    const res = toLogListItemResponse(multiAttLog, mockBuildUrl);
+
+    expect(res.attachments[0]?.url).toBe('https://api.daydone.local/attachments/att-1/content?token=abc');
+    expect(res.attachments[1]?.url).toBeNull();
+  });
 });
 

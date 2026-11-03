@@ -10,11 +10,20 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
+  UseFilters,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
+import multer from 'multer';
+import { AttachmentsService } from '../attachments/attachments.service.js';
+import type { AttachmentResponse } from '../attachments/dto/attachment.types.js';
 import {
   CurrentUser,
   type CurrentUserData,
 } from '../common/decorators/current-user.decorator.js';
+import { MulterExceptionFilter } from '../common/filters/multer-exception.filter.js';
 import {
   createLogSchema,
   dateParamSchema,
@@ -30,7 +39,10 @@ import { LogsService } from './logs.service.js';
 
 @Controller('logs')
 export class LogsController {
-  constructor(private readonly logsService: LogsService) {}
+  constructor(
+    private readonly logsService: LogsService,
+    private readonly attachmentsService: AttachmentsService,
+  ) {}
 
   @Get()
   findAll(
@@ -62,6 +74,31 @@ export class LogsController {
     @Body({ schema: createLogSchema }) dto: CreateLogDto,
   ): Promise<LogResponse> {
     return this.logsService.create(user.userId, dto);
+  }
+
+  @Post(':id/attachments')
+  @UseFilters(MulterExceptionFilter)
+  @UseInterceptors(
+    FilesInterceptor('files', 5, {
+      storage: multer.memoryStorage(),
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @HttpCode(HttpStatus.CREATED)
+  async uploadAttachments(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<{ data: AttachmentResponse[] }> {
+    const data = await this.attachmentsService.uploadAttachments(
+      user.userId,
+      id,
+      files,
+    );
+    return { data };
   }
 
   @Patch(':id')

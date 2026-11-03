@@ -1,8 +1,9 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { AttachmentsService } from '../attachments/attachments.service.js';
 import { toDbDate } from '../common/date.js';
 import { DomainException } from '../common/errors/domain.exception.js';
 import { ErrorCode } from '../common/errors/error-codes.js';
-import { Prisma } from '../generated/prisma/client.js';
+import { DriveStatus, Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type {
   CreateLogDto,
@@ -14,11 +15,29 @@ import {
   toLogResponse,
   type LogResponse,
   type PaginatedLogsResponse,
+  type UrlBuilder,
 } from './logs.mapper.js';
 
 @Injectable()
 export class LogsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly attachmentsService: AttachmentsService,
+  ) {}
+
+  private async getUrlBuilder(userId: string): Promise<UrlBuilder | undefined> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { driveStatus: true },
+    });
+
+    if (user?.driveStatus === DriveStatus.NEEDS_RECONNECT) {
+      return undefined;
+    }
+
+    return (attachmentId: string) =>
+      this.attachmentsService.buildAttachmentUrl(attachmentId, userId);
+  }
 
   async findAll(
     userId: string,
@@ -69,9 +88,10 @@ export class LogsService {
     ]);
 
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+    const urlBuilder = await this.getUrlBuilder(userId);
 
     return {
-      data: logs.map(toLogListItemResponse),
+      data: logs.map((log) => toLogListItemResponse(log, urlBuilder)),
       meta: {
         page,
         limit,
@@ -95,7 +115,8 @@ export class LogsService {
       throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
     }
 
-    return toLogResponse(log);
+    const urlBuilder = await this.getUrlBuilder(userId);
+    return toLogResponse(log, urlBuilder);
   }
 
   async findByDate(userId: string, date: string): Promise<LogResponse> {
@@ -120,7 +141,8 @@ export class LogsService {
       );
     }
 
-    return toLogResponse(log);
+    const urlBuilder = await this.getUrlBuilder(userId);
+    return toLogResponse(log, urlBuilder);
   }
 
   async create(userId: string, dto: CreateLogDto): Promise<LogResponse> {
@@ -140,7 +162,8 @@ export class LogsService {
         },
       });
 
-      return toLogResponse(log);
+      const urlBuilder = await this.getUrlBuilder(userId);
+      return toLogResponse(log, urlBuilder);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -186,7 +209,8 @@ export class LogsService {
         },
       });
 
-      return toLogResponse(updated);
+      const urlBuilder = await this.getUrlBuilder(userId);
+      return toLogResponse(updated, urlBuilder);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -209,11 +233,30 @@ export class LogsService {
   }
 
   async remove(userId: string, id: string): Promise<void> {
-    // Pastikan logbook ada dan milik pengguna (lempar 404 jika bukan)
-    await this.findOne(userId, id);
+    const log = await this.prisma.logEntry.findFirst({
+      where: { id, userId },
+      include: {
+        attachments: {
+          select: { driveFileId: true },
+        },
+      },
+    });
 
+    if (!log) {
+      throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
+    }
+
+    // Hapus logbook di database (cascade akan menghapus baris attachments)
     await this.prisma.logEntry.delete({
       where: { id },
     });
+
+    // Pindahkan seluruh file lampiran di Drive ke Trash (best-effort)
+    if (log.attachments.length > 0) {
+      await this.attachmentsService.trashAttachmentsForLog(
+        userId,
+        log.attachments,
+      );
+    }
   }
 }

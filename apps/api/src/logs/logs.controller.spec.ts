@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AttachmentsService } from '../attachments/attachments.service.js';
 import type { CurrentUserData } from '../common/decorators/current-user.decorator.js';
 import { LogsController } from './logs.controller.js';
 import { LogsService } from './logs.service.js';
@@ -13,6 +14,9 @@ describe('LogsController', () => {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
+  };
+  let mockAttachmentsService: {
+    uploadAttachments: ReturnType<typeof vi.fn>;
   };
 
   const mockUser: CurrentUserData = {
@@ -42,12 +46,20 @@ describe('LogsController', () => {
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
+    mockAttachmentsService = {
+      uploadAttachments: vi.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LogsController],
       providers: [
         {
           provide: LogsService,
           useValue: mockLogsService,
+        },
+        {
+          provide: AttachmentsService,
+          useValue: mockAttachmentsService,
         },
       ],
     }).compile();

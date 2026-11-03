@@ -13,6 +13,7 @@ import { HealthModule } from './health/health.module.js';
 import { LogsModule } from './logs/logs.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { AttachmentsModule } from './attachments/attachments.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -43,6 +44,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     HealthModule,
     LogsModule,
     StorageModule,
+    AttachmentsModule,
   ],
   controllers: [],
   providers: [
