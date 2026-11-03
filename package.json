@@ -8,6 +8,7 @@
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "test:e2e": "pnpm -r run test:e2e",
+    "test:google-login": "pnpm --filter api run test:google-login",
     "format": "pnpm -r run format"
   },
   "keywords": [],
