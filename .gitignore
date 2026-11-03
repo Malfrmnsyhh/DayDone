@@ -4,4 +4,5 @@ dist
 *.tsbuildinfo
 coverage
 .agent
-src/generated
+.agents
+**/src/generated/**

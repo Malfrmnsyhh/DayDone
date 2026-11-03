@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DriveStatus {
+  NOT_CONNECTED   // pengguna tidak memberi izin drive.file
+  CONNECTED
+  NEEDS_RECONNECT // refresh token dicabut/kedaluwarsa
+}
+
+enum ClientPlatform {
+  WEB
+  MOBILE
+}
+
+model User {
+  id                 String      @id @default(uuid()) @db.Uuid
+  googleId           String      @unique
+  email              String      @unique
+  name               String?
+  avatarUrl          String?
+  /// Refresh token Google, terenkripsi AES-256-GCM. Tidak pernah dikirim ke client.
+  googleRefreshToken String?
+  driveFolderId      String?
+  driveStatus        DriveStatus @default(NOT_CONNECTED)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  sessions Session[]
+  logs     LogEntry[]
+
+  @@map("users")
+}
+
+model Session {
+  id               String         @id @default(uuid()) @db.Uuid
+  userId           String         @db.Uuid
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 dari refresh token sesi. Token asli tidak disimpan.
+  refreshTokenHash String         @unique
+  platform         ClientPlatform
+  userAgent        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  /// Diisi saat token dirotasi; dipakai untuk deteksi pemakaian ulang.
+  replacedById     String?        @db.Uuid
+  createdAt        DateTime       @default(now())
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LogEntry {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Tanggal kalender lokal pengguna, tanpa jam dan zona waktu.
+  date        DateTime     @db.Date
+  description String       @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  attachments Attachment[]
+
+  @@unique([userId, date])
+  @@map("log_entries")
+}
+
+model Attachment {
+  id          String   @id @default(uuid()) @db.Uuid
+  logEntryId  String   @db.Uuid
+  logEntry    LogEntry @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
+  driveFileId String   @unique
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  /// Urutan tampil di dalam logbook (0, 1, 2, ...).
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([logEntryId, position])
+  @@map("attachments")
+}
