@@ -20,3 +20,4 @@ describe('HealthController', () => {
     expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
   });
 });
+
