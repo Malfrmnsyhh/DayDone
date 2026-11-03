@@ -69,16 +69,72 @@ describe('GoogleDriveStorage', () => {
   });
 
   describe('ensureAppFolder', () => {
-    it('mengembalikan driveFolderId yang sudah ada jika tersimpan di DB', async () => {
+    it('mengembalikan driveFolderId yang sudah ada jika tersimpan di DB dan tidak trashed', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce({
         id: 'user-1',
         driveFolderId: 'folder-existing-123',
+      });
+      mockDriveFilesGet.mockResolvedValueOnce({
+        data: { id: 'folder-existing-123', trashed: false },
       });
 
       const folderId = await storage.ensureAppFolder('user-1');
 
       expect(folderId).toBe('folder-existing-123');
+      expect(mockDriveFilesGet).toHaveBeenCalledWith({
+        fileId: 'folder-existing-123',
+        fields: 'id,trashed',
+      });
       expect(mockDriveFilesCreate).not.toHaveBeenCalled();
+    });
+
+    it('membuat folder baru bila folder yang tersimpan di DB berada di Trash (trashed: true)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'user-1',
+        driveFolderId: 'folder-trashed-123',
+      });
+      mockDriveFilesGet.mockResolvedValueOnce({
+        data: { id: 'folder-trashed-123', trashed: true },
+      });
+      mockDriveFilesCreate.mockResolvedValueOnce({
+        data: { id: 'new-folder-after-trash' },
+      });
+
+      const folderId = await storage.ensureAppFolder('user-1');
+
+      expect(folderId).toBe('new-folder-after-trash');
+      expect(mockDriveFilesCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestBody: {
+            name: 'DayDone',
+            mimeType: 'application/vnd.google-apps.folder',
+          },
+        }),
+      );
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user-1', driveFolderId: 'folder-trashed-123' },
+        data: { driveFolderId: 'new-folder-after-trash' },
+      });
+    });
+
+    it('membuat folder baru bila folder yang tersimpan di DB mengembalikan status 404 saat dicek', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: 'user-1',
+        driveFolderId: 'folder-deleted-404',
+      });
+      mockDriveFilesGet.mockRejectedValueOnce({ status: 404 });
+      mockDriveFilesCreate.mockResolvedValueOnce({
+        data: { id: 'new-folder-after-404' },
+      });
+
+      const folderId = await storage.ensureAppFolder('user-1');
+
+      expect(folderId).toBe('new-folder-after-404');
+      expect(mockDriveFilesCreate).toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: 'user-1', driveFolderId: 'folder-deleted-404' },
+        data: { driveFolderId: 'new-folder-after-404' },
+      });
     });
 
     it('membuat folder DayDone baru dan menyimpannya jika belum ada', async () => {

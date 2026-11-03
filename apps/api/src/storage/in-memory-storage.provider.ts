@@ -28,6 +28,7 @@ export class InMemoryStorageProvider implements StorageProvider {
   private simulateReconnectRequired = new Set<string>();
   private simulateStorageFull = new Set<string>();
   private simulateUnavailable = new Set<string>();
+  private simulateFolderTrashed = new Set<string>();
   private folderNotFoundCountdown = new Map<string, number>();
 
   // Counter untuk pengujian konkurensi folder
@@ -42,6 +43,7 @@ export class InMemoryStorageProvider implements StorageProvider {
     this.simulateReconnectRequired.clear();
     this.simulateStorageFull.clear();
     this.simulateUnavailable.clear();
+    this.simulateFolderTrashed.clear();
     this.folderNotFoundCountdown.clear();
     this.ensureFolderCallCount = 0;
   }
@@ -59,6 +61,11 @@ export class InMemoryStorageProvider implements StorageProvider {
   public setSimulateUnavailable(userId: string, enabled: boolean): void {
     if (enabled) this.simulateUnavailable.add(userId);
     else this.simulateUnavailable.delete(userId);
+  }
+
+  public setSimulateFolderTrashed(userId: string, trashed: boolean): void {
+    if (trashed) this.simulateFolderTrashed.add(userId);
+    else this.simulateFolderTrashed.delete(userId);
   }
 
   public setSimulateFolderNotFound(userId: string, times: number): void {
@@ -87,7 +94,13 @@ export class InMemoryStorageProvider implements StorageProvider {
 
     const existing = this.userFolders.get(userId);
     if (existing) {
-      return existing;
+      if (this.simulateFolderTrashed.has(userId)) {
+        // Simulasi folder berada di Trash: buat folder baru
+        this.simulateFolderTrashed.delete(userId);
+        this.userFolders.delete(userId);
+      } else {
+        return existing;
+      }
     }
 
     const folderId = `fake-folder-${userId}-${randomUUID().slice(0, 8)}`;

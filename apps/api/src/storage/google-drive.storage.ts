@@ -198,11 +198,36 @@ export class GoogleDriveStorage implements StorageProvider {
         throw new NotFoundException('Pengguna tidak ditemukan');
       }
 
-      if (user.driveFolderId) {
-        return user.driveFolderId;
-      }
-
       const { drive: driveClient } = await this.getDriveClient(userId);
+
+      // Bila driveFolderId sudah ada di database, verifikasi folder tersebut masih ada dan TIDAK di Trash
+      if (user.driveFolderId) {
+        try {
+          const checkRes = await this.executeWithRetry(() =>
+            driveClient.files.get({
+              fileId: user.driveFolderId!,
+              fields: 'id,trashed',
+            }),
+          );
+
+          if (!checkRes.data.trashed) {
+            return user.driveFolderId;
+          }
+
+          this.logger.warn(
+            `Folder Drive ${user.driveFolderId} milik user ${userId} berada di Trash, membuat folder baru`,
+          );
+        } catch (checkErr: unknown) {
+          const status = (checkErr as Record<string, unknown>).status;
+          if (status === 404) {
+            this.logger.warn(
+              `Folder Drive ${user.driveFolderId} milik user ${userId} tidak ditemukan (404), membuat folder baru`,
+            );
+          } else {
+            throw checkErr;
+          }
+        }
+      }
 
       // Buat folder "DayDone" di Drive pengguna
       const folderRes = await this.executeWithRetry(() =>
@@ -220,9 +245,9 @@ export class GoogleDriveStorage implements StorageProvider {
         throw new Error('Gagal mendapatkan id folder baru dari Google Drive');
       }
 
-      // Update kondisional: hanya jika driveFolderId masih null
+      // Update kondisional: hanya jika driveFolderId masih sama dengan nilai di awal (null atau id lama yang trashed/404)
       const updated = await this.prisma.user.updateMany({
-        where: { id: userId, driveFolderId: null },
+        where: { id: userId, driveFolderId: user.driveFolderId },
         data: { driveFolderId: createdFolderId },
       });
 

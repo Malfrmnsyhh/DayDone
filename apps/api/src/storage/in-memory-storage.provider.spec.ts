@@ -18,6 +18,14 @@ describe('InMemoryStorageProvider', () => {
     expect(folderId2).toBe(folderId1);
   });
 
+  it('mensimulasikan folder yang ada di trash: membuat folder baru saat ensureAppFolder dipanggil kembali', async () => {
+    const folder1 = await provider.ensureAppFolder('user-1');
+    provider.setSimulateFolderTrashed('user-1', true);
+    const folder2 = await provider.ensureAppFolder('user-1');
+    expect(folder2).not.toBe(folder1);
+    expect(folder2).toContain('fake-folder-user-1');
+  });
+
   it('berhasil mengunggah file dan mengalirkannya kembali', async () => {
     const content = Buffer.from('hello-image-data');
     const result = await provider.upload('user-1', {
