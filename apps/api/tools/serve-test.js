@@ -15,9 +15,10 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = 5173;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
-  console.log(`> Halaman uji Google Login siap di: http://localhost:${PORT}`);
+  console.log(`> Halaman uji Google Drive (M5) siap di:`);
+  console.log(`  - http://localhost:${PORT}`);
+  console.log(`  - http://127.0.0.1:${PORT}`);
   console.log(`======================================================\n`);
 });
-

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DayDone — Uji Coba Login Google OAuth (M4)</title>
+  <title>DayDone — Alat Uji Integrasi Google Drive & Lampiran (M5)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     body {
@@ -12,12 +12,13 @@
       padding: 24px;
       background-color: #f8fafc;
       color: #0f172a;
+      line-height: 1.5;
     }
     .card {
       background: #ffffff;
       border-radius: 8px;
       padding: 24px;
-      max-width: 720px;
+      max-width: 820px;
       margin: 0 auto 20px auto;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       border: 1px solid #e2e8f0;
@@ -27,6 +28,14 @@
       margin-top: 0;
       margin-bottom: 8px;
       color: #1e293b;
+    }
+    h2 {
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 8px;
     }
     p {
       color: #64748b;
@@ -44,7 +53,7 @@
       margin-bottom: 6px;
       color: #334155;
     }
-    input[type="text"] {
+    input[type="text"], input[type="date"], select, textarea {
       width: 100%;
       box-sizing: border-box;
       padding: 10px 12px;
@@ -52,8 +61,22 @@
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       outline: none;
+      background: #ffffff;
     }
-    input[type="text"]:focus {
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    input:focus, select:focus, textarea:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
@@ -64,19 +87,23 @@
       margin-bottom: 16px;
     }
     button {
-      padding: 10px 16px;
-      font-size: 14px;
+      padding: 9px 16px;
+      font-size: 13px;
       font-weight: 500;
       border-radius: 6px;
       border: 1px solid transparent;
       cursor: pointer;
-      transition: background 0.15s ease;
+      transition: all 0.15s ease;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     .btn-primary {
       background: #2563eb;
       color: #ffffff;
     }
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: #1d4ed8;
     }
     .btn-secondary {
@@ -84,25 +111,23 @@
       color: #334155;
       border-color: #cbd5e1;
     }
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
       background: #e2e8f0;
+    }
+    .btn-success {
+      background: #16a34a;
+      color: #ffffff;
+    }
+    .btn-success:hover:not(:disabled) {
+      background: #15803d;
     }
     .btn-danger {
       background: #fee2e2;
       color: #991b1b;
       border-color: #fca5a5;
     }
-    .btn-danger:hover {
+    .btn-danger:hover:not(:disabled) {
       background: #fecaca;
-    }
-    pre {
-      background: #0f172a;
-      color: #f8fafc;
-      padding: 16px;
-      border-radius: 6px;
-      font-size: 13px;
-      overflow-x: auto;
-      max-height: 350px;
     }
     .badge {
       display: inline-block;
@@ -117,13 +142,74 @@
       background: #dcfce7;
       color: #166534;
     }
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .gallery-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+    }
+    .gallery-item img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #e2e8f0;
+    }
+    .gallery-body {
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .gallery-meta {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      overflow-x: auto;
+      max-height: 350px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .help-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px;
+      font-size: 13px;
+      color: #1e40af;
+      margin-bottom: 16px;
+      border-radius: 0 4px 4px 0;
+    }
   </style>
 </head>
 <body>
 
+  <!-- KARTU 1: AUTENTIKASI GOOGLE & SESI (M4) -->
   <div class="card">
-    <h1>DayDone — Alat Uji Login Google Identity Services (M4)</h1>
-    <p>Halaman uji coba lokal untuk alur otorisasi kode (GIS popup), rotasi sesi web (cookie HttpOnly), dan logout.</p>
+    <h1>DayDone — Alat Uji Integrasi M4 & M5</h1>
+    <p>Pengujian interaktif langsung terhadap Google OAuth, Google Drive, pemrosesan Sharp, signed URL, dan penghapusan akun.</p>
 
     <div class="form-group">
       <label for="clientId">Google Web Client ID</label>
@@ -134,37 +220,147 @@
       <button class="btn-primary" id="loginBtn">1. Login dengan Google (GIS Popup)</button>
       <button class="btn-secondary" id="meBtn" disabled>2. GET /auth/me</button>
       <button class="btn-secondary" id="refreshBtn" disabled>3. POST /auth/refresh</button>
-      <button class="btn-danger" id="logoutBtn" disabled>4. POST /auth/logout</button>
+      <button class="btn-secondary" id="logoutBtn" disabled>4. POST /auth/logout</button>
     </div>
 
-    <div>
-      Status Token Akses: <span id="authStatus" class="badge">Belum Login</span>
+    <div class="status-row">
+      <span style="font-size: 13px; font-weight: 500;">Status Autentikasi:</span>
+      <span id="authStatus" class="badge">Belum Login</span>
+      <span id="driveBadge" class="badge" style="display: none;">Drive: -</span>
     </div>
   </div>
 
+  <!-- KARTU 2: LOGBOOK & LAMPIRAN FOTO (M5) -->
+  <div class="card" id="m5Card">
+    <h2>Manajemen Logbook & Lampiran Foto (M5)</h2>
+
+    <div class="help-box">
+      <strong>Checklist Pengujian Google Drive:</strong>
+      <ol style="margin: 4px 0 0 16px; padding: 0;">
+        <li>Buat logbook, lalu unggah 1–5 foto (coba foto HP dengan GPS/lokasi).</li>
+        <li>Buka Google Drive: Folder <code>DayDone</code> akan dibuat otomatis, nama file <code>YYYY-MM-DD_&lt;id8&gt;.jpg</code>, dan EXIF GPS terhapus bersih.</li>
+        <li>Foto di bawah dimuat menggunakan URL bertanda tangan (HMAC berumur 5 menit).</li>
+        <li>Hapus lampiran atau logbook: file terkait di Google Drive otomatis dipindahkan ke Trash.</li>
+      </ol>
+    </div>
+
+    <!-- Buat Logbook -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+      <h3 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">Langkah A: Buat Logbook Harian</h3>
+      <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+        <div style="flex: 1;">
+          <label for="logDate">Tanggal (YYYY-MM-DD)</label>
+          <input type="date" id="logDate" />
+        </div>
+        <div style="flex: 2;">
+          <label for="logContent">Deskripsi Kegiatan (<code>description</code>)</label>
+          <input type="text" id="logContent" placeholder="Contoh: Menyelesaikan integrasi modul Google Drive..." />
+        </div>
+      </div>
+      <button class="btn-primary" id="createLogBtn" disabled>Buat Logbook (POST /logs)</button>
+    </div>
+
+    <!-- Pilih Logbook Aktif -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+      <h3 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">Pilih Logbook untuk Unggah Foto</h3>
+      
+      <div class="form-group">
+        <label for="logSelect">Daftar Logbook Tersimpan</label>
+        <div style="display: flex; gap: 8px;">
+          <select id="logSelect" style="flex: 1;">
+            <option value="">-- Klik "Muat Daftar Logbook" untuk melihat logbook Anda --</option>
+          </select>
+          <button class="btn-secondary" id="loadListBtn" disabled>Muat Daftar Logbook (GET /logs)</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="activeLogId">Logbook ID Aktif (UUID)</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="activeLogId" placeholder="ID Logbook (otomatis terisi saat buat/pilih logbook)" readonly style="background: #f1f5f9;" />
+          <button class="btn-secondary" id="fetchLogBtn" disabled>Detail & Foto (GET /logs/:id)</button>
+          <button class="btn-danger" id="deleteLogBtn" disabled>Hapus Logbook (DELETE /logs/:id)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unggah Foto Lampiran -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+      <h3 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">Langkah B: Unggah Foto Lampiran (Maksimal 5 foto, file &le; 10MB)</h3>
+      <div class="form-group">
+        <input type="file" id="photoFiles" multiple accept="image/jpeg,image/png,image/webp" />
+      </div>
+      <button class="btn-success" id="uploadPhotosBtn" disabled>Unggah ke Google Drive (POST /logs/:id/attachments)</button>
+    </div>
+
+    <!-- Galeri Lampiran -->
+    <div>
+      <h3 style="font-size: 14px; margin-bottom: 8px;">Daftar Lampiran Foto Terunggah:</h3>
+      <div id="galleryContainer" class="gallery">
+        <p style="color: #94a3b8; font-style: italic; grid-column: 1/-1;">Belum ada foto yang dimuat untuk logbook ini.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- KARTU 3: HAPUS AKUN PENGGUNA (M5) -->
   <div class="card">
-    <h1>Log Aktivitas & Respon Server</h1>
-    <pre id="outputLog">// Log respon akan tampil di sini...</pre>
+    <h2 style="color: #991b1b;">Zona Bahaya: Hapus Akun (DELETE /users/me)</h2>
+    <p>Menghapus seluruh akun pengguna dan relasinya di database DayDone. Token Google akan dicabut, namun file di Google Drive tetap aman tersimpan.</p>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="deleteConfirmText" placeholder='Ketik "HAPUS" untuk konfirmasi' style="max-width: 300px;" />
+      <button class="btn-danger" id="deleteUserBtn" disabled>Hapus Akun Saya</button>
+    </div>
+  </div>
+
+  <!-- KARTU 4: LOG AKTIVITAS -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h1 style="margin: 0;">Log Aktivitas & Respon Server</h1>
+      <button class="btn-secondary" id="clearLogBtn" style="padding: 4px 10px; font-size: 12px;">Bersihkan Log</button>
+    </div>
+    <pre id="outputLog">// Log respon server akan tampil di sini...</pre>
   </div>
 
   <script>
     const API_BASE = 'http://localhost:3000/api/v1';
     let currentAccessToken = null;
 
+    // Elemen DOM
     const clientIdInput = document.getElementById('clientId');
     const loginBtn = document.getElementById('loginBtn');
     const meBtn = document.getElementById('meBtn');
     const refreshBtn = document.getElementById('refreshBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const authStatus = document.getElementById('authStatus');
+    const driveBadge = document.getElementById('driveBadge');
+
+    const logDateInput = document.getElementById('logDate');
+    const logContentInput = document.getElementById('logContent');
+    const createLogBtn = document.getElementById('createLogBtn');
+    const logSelect = document.getElementById('logSelect');
+    const loadListBtn = document.getElementById('loadListBtn');
+    const activeLogIdInput = document.getElementById('activeLogId');
+    const fetchLogBtn = document.getElementById('fetchLogBtn');
+    const deleteLogBtn = document.getElementById('deleteLogBtn');
+    const photoFilesInput = document.getElementById('photoFiles');
+    const uploadPhotosBtn = document.getElementById('uploadPhotosBtn');
+    const galleryContainer = document.getElementById('galleryContainer');
+
+    const deleteConfirmTextInput = document.getElementById('deleteConfirmText');
+    const deleteUserBtn = document.getElementById('deleteUserBtn');
+    const clearLogBtn = document.getElementById('clearLogBtn');
     const outputLog = document.getElementById('outputLog');
 
-    // Muat client ID tersimpan di localStorage browser (tidak pernah ter-commit)
+    // Default tanggal hari ini (YYYY-MM-DD lokal)
+    const today = new Date();
+    const localDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    logDateInput.value = localDateStr;
+
+    // Muat client ID tersimpan di localStorage browser
     const savedClientId = localStorage.getItem('daydone_test_client_id');
     if (savedClientId) {
       clientIdInput.value = savedClientId;
     }
-
     clientIdInput.addEventListener('input', (e) => {
       localStorage.setItem('daydone_test_client_id', e.target.value.trim());
     });
@@ -174,24 +370,45 @@
       outputLog.textContent = `[${timestamp}] ${title}\n` + (typeof data === 'string' ? data : JSON.stringify(data, null, 2)) + '\n\n' + outputLog.textContent;
     }
 
-    function updateAuthUI(token) {
+    clearLogBtn.addEventListener('click', () => {
+      outputLog.textContent = '// Log dibersihkan.\n';
+    });
+
+    function updateAuthUI(token, driveStatus = null) {
       currentAccessToken = token;
-      if (token) {
-        authStatus.textContent = 'Terautentikasi (Access Token Tersimpan di Memori)';
+      const isAuth = !!token;
+
+      if (isAuth) {
+        authStatus.textContent = 'Terautentikasi';
         authStatus.className = 'badge badge-success';
-        meBtn.disabled = false;
-        refreshBtn.disabled = false;
-        logoutBtn.disabled = false;
       } else {
-        authStatus.textContent = 'Belum Login / Telah Logout';
+        authStatus.textContent = 'Belum Login';
         authStatus.className = 'badge';
-        meBtn.disabled = true;
-        refreshBtn.disabled = true;
-        logoutBtn.disabled = true;
+        driveBadge.style.display = 'none';
+      }
+
+      meBtn.disabled = !isAuth;
+      refreshBtn.disabled = !isAuth;
+      logoutBtn.disabled = !isAuth;
+      createLogBtn.disabled = !isAuth;
+      loadListBtn.disabled = !isAuth;
+      fetchLogBtn.disabled = !isAuth;
+      deleteLogBtn.disabled = !isAuth;
+      uploadPhotosBtn.disabled = !isAuth;
+      deleteUserBtn.disabled = !isAuth;
+
+      if (driveStatus) {
+        driveBadge.style.display = 'inline-block';
+        driveBadge.textContent = `Drive: ${driveStatus}`;
+        if (driveStatus === 'CONNECTED') {
+          driveBadge.className = 'badge badge-success';
+        } else {
+          driveBadge.className = 'badge badge-warning';
+        }
       }
     }
 
-    // 1. Login dengan Google
+    // 1. LOGIN GOOGLE (GIS Popup)
     loginBtn.addEventListener('click', () => {
       const clientId = clientIdInput.value.trim();
       if (!clientId) {
@@ -220,7 +437,7 @@
             const res = await fetch(`${API_BASE}/auth/google`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              credentials: 'include', // penting untuk menerima cookie daydone_rt
+              credentials: 'include',
               body: JSON.stringify({
                 code: response.code,
                 platform: 'WEB',
@@ -232,7 +449,9 @@
             log(`POST /auth/google -> ${res.status}`, body);
 
             if (res.ok && body.accessToken) {
-              updateAuthUI(body.accessToken);
+              updateAuthUI(body.accessToken, body.user?.driveStatus);
+              // Otomatis muat daftar logbook setelah login
+              loadListBtn.click();
             }
           } catch (err) {
             log('Gagal menghubungi backend DayDone', err.message);
@@ -248,13 +467,14 @@
       try {
         const res = await fetch(`${API_BASE}/auth/me`, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${currentAccessToken}`,
-          },
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
           credentials: 'include',
         });
         const body = await res.json();
         log(`GET /auth/me -> ${res.status}`, body);
+        if (res.ok) {
+          updateAuthUI(currentAccessToken, body.driveStatus);
+        }
       } catch (err) {
         log('Gagal memanggil /auth/me', err.message);
       }
@@ -268,9 +488,9 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'daydone-web', // Proteksi CSRF
+            'X-Requested-With': 'daydone-web',
           },
-          credentials: 'include', // Mengirimkan cookie daydone_rt
+          credentials: 'include',
           body: JSON.stringify({}),
         });
         const body = await res.json();
@@ -293,18 +513,320 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'daydone-web', // Proteksi CSRF
+            'X-Requested-With': 'daydone-web',
           },
           credentials: 'include',
           body: JSON.stringify({}),
         });
         log(`POST /auth/logout -> ${res.status}`, res.status === 204 ? 'Logout Berhasil (Cookie Dihapus)' : await res.json());
         updateAuthUI(null);
+        activeLogIdInput.value = '';
+        logSelect.innerHTML = '<option value="">-- Belum Login --</option>';
+        galleryContainer.innerHTML = '<p style="color: #94a3b8; font-style: italic; grid-column: 1/-1;">Belum ada foto yang dimuat.</p>';
       } catch (err) {
         log('Gagal memanggil /auth/logout', err.message);
+      }
+    });
+
+    // 5. POST /logs (Buat Logbook) — field 'description' sesuai Zod createLogSchema
+    createLogBtn.addEventListener('click', async () => {
+      const date = logDateInput.value;
+      const description = logContentInput.value.trim();
+
+      if (!date || !description) {
+        alert('Tanggal dan isi deskripsi logbook wajib diisi!');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/logs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentAccessToken}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ date, description }),
+        });
+
+        const body = await res.json();
+        log(`POST /logs -> ${res.status}`, body);
+
+        if (res.ok && body.id) {
+          activeLogIdInput.value = body.id;
+          renderGallery(body.attachments || []);
+          // Segarkan daftar logbook
+          loadListBtn.click();
+        } else if (res.status === 409 && body.code === 'LOG_DATE_CONFLICT') {
+          alert('Logbook untuk tanggal ini sudah ada! Memuat data logbook yang sudah ada...');
+          // Muat detail logbook yang sudah ada
+          if (body.existingLogId) {
+            activeLogIdInput.value = body.existingLogId;
+            fetchLogBtn.click();
+          } else {
+            loadListBtn.click();
+          }
+        }
+      } catch (err) {
+        log('Gagal membuat logbook', err.message);
+      }
+    });
+
+    // 6. GET /logs (Daftar Logbook)
+    loadListBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/logs?limit=20`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+          credentials: 'include',
+        });
+        const body = await res.json();
+        log(`GET /logs -> ${res.status}`, body);
+
+        if (res.ok && body.data) {
+          logSelect.innerHTML = '';
+          if (body.data.length === 0) {
+            logSelect.innerHTML = '<option value="">-- Belum ada logbook dibuat --</option>';
+            return;
+          }
+
+          logSelect.innerHTML = '<option value="">-- Pilih salah satu logbook di bawah --</option>';
+          body.data.forEach((logItem) => {
+            const opt = document.createElement('option');
+            opt.value = logItem.id;
+            opt.textContent = `[${logItem.date}] ${logItem.description.slice(0, 40)}${logItem.description.length > 40 ? '...' : ''} (${logItem.attachmentCount} foto)`;
+            logSelect.appendChild(opt);
+          });
+
+          // Jika ada log aktif, pilih otomatis
+          if (activeLogIdInput.value) {
+            logSelect.value = activeLogIdInput.value;
+          } else if (body.data.length > 0) {
+            logSelect.value = body.data[0].id;
+            activeLogIdInput.value = body.data[0].id;
+            fetchLogBtn.click();
+          }
+        }
+      } catch (err) {
+        log('Gagal memuat daftar logbook', err.message);
+      }
+    });
+
+    logSelect.addEventListener('change', (e) => {
+      const selectedId = e.target.value;
+      if (selectedId) {
+        activeLogIdInput.value = selectedId;
+        fetchLogBtn.click();
+      }
+    });
+
+    // 7. GET /logs/:id (Detail Logbook & Foto)
+    fetchLogBtn.addEventListener('click', async () => {
+      const logId = activeLogIdInput.value.trim();
+      if (!logId) {
+        alert('Pilih Logbook terlebih dahulu!');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/logs/${logId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+          credentials: 'include',
+        });
+        const body = await res.json();
+        log(`GET /logs/${logId} -> ${res.status}`, body);
+
+        if (res.ok) {
+          logDateInput.value = body.date;
+          logContentInput.value = body.description || '';
+          renderGallery(body.attachments || []);
+        }
+      } catch (err) {
+        log('Gagal memuat detail logbook', err.message);
+      }
+    });
+
+    // 8. POST /logs/:id/attachments (Unggah Foto Lampiran)
+    uploadPhotosBtn.addEventListener('click', async () => {
+      const logId = activeLogIdInput.value.trim();
+      if (!logId) {
+        alert('Pilih atau buat Logbook terlebih dahulu!');
+        return;
+      }
+
+      const files = photoFilesInput.files;
+      if (!files || files.length === 0) {
+        alert('Pilih setidaknya 1 file foto untuk diunggah!');
+        return;
+      }
+      if (files.length > 5) {
+        alert('Maksimal 5 foto per unggahan!');
+        return;
+      }
+
+      uploadPhotosBtn.disabled = true;
+      uploadPhotosBtn.textContent = 'Mengunggah & Memproses Gambar di Google Drive...';
+
+      try {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+          formData.append('files', files[i]);
+        }
+
+        const res = await fetch(`${API_BASE}/logs/${logId}/attachments`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentAccessToken}`,
+          },
+          credentials: 'include',
+          body: formData,
+        });
+
+        const body = await res.json();
+        log(`POST /logs/${logId}/attachments -> ${res.status}`, body);
+
+        if (res.ok) {
+          photoFilesInput.value = '';
+          // Muat ulang logbook untuk mendapatkan list lengkap beserta signed URL terbaru
+          fetchLogBtn.click();
+          loadListBtn.click();
+        }
+      } catch (err) {
+        log('Gagal mengunggah foto', err.message);
+      } finally {
+        uploadPhotosBtn.disabled = false;
+        uploadPhotosBtn.textContent = 'Unggah ke Google Drive (POST /logs/:id/attachments)';
+      }
+    });
+
+    // 9. RENDER GALERI FOTO & TOMBOL HAPUS LAMPIRAN
+    function renderGallery(attachments) {
+      if (!attachments || attachments.length === 0) {
+        galleryContainer.innerHTML = '<p style="color: #94a3b8; font-style: italic; grid-column: 1/-1;">Belum ada foto yang dimuat untuk logbook ini.</p>';
+        return;
+      }
+
+      galleryContainer.innerHTML = '';
+      attachments.forEach((att) => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        const sizeKb = Math.round((att.sizeBytes || att.byteSize || 0) / 1024);
+        const fileName = att.fileName || att.filename || 'Foto';
+        const expiresAtStr = att.urlExpiresAt ? new Date(att.urlExpiresAt).toLocaleTimeString() : '-';
+
+        item.innerHTML = `
+          <img src="${att.url}" alt="${fileName}" loading="lazy" />
+          <div class="gallery-body">
+            <div>
+              <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px; word-break: break-all;">${fileName}</div>
+              <div class="gallery-meta">
+                Posisi: ${att.position} | Ukuran: ${sizeKb} KB<br>
+                Dimensi: ${att.width || '-'} x ${att.height || '-'}<br>
+                URL Exp: ${expiresAtStr}
+              </div>
+            </div>
+            <button class="btn-danger" style="margin-top: 8px; width: 100%;" onclick="deleteAttachment('${att.id}')">
+              Hapus Foto (Trash Drive)
+            </button>
+          </div>
+        `;
+        galleryContainer.appendChild(item);
+      });
+    }
+
+    // 10. DELETE /attachments/:id (Hapus Lampiran)
+    window.deleteAttachment = async function(attachmentId) {
+      if (!confirm('Apakah Anda yakin ingin menghapus lampiran ini? File di Google Drive akan dipindahkan ke Trash.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/attachments/${attachmentId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+          credentials: 'include',
+        });
+
+        log(`DELETE /attachments/${attachmentId} -> ${res.status}`, res.status === 204 ? 'Lampiran Dihapus (File Masuk Trash Drive)' : await res.json());
+
+        if (res.status === 204) {
+          fetchLogBtn.click();
+          loadListBtn.click();
+        }
+      } catch (err) {
+        log('Gagal menghapus lampiran', err.message);
+      }
+    };
+
+    // 11. DELETE /logs/:id (Hapus Logbook)
+    deleteLogBtn.addEventListener('click', async () => {
+      const logId = activeLogIdInput.value.trim();
+      if (!logId) {
+        alert('Pilih Logbook terlebih dahulu!');
+        return;
+      }
+
+      if (!confirm('Hapus logbook ini beserta seluruh lampiran fotonya di Google Drive?')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/logs/${logId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+          credentials: 'include',
+        });
+
+        log(`DELETE /logs/${logId} -> ${res.status}`, res.status === 204 ? 'Logbook & Lampiran Berhasil Dihapus' : await res.json());
+
+        if (res.status === 204) {
+          activeLogIdInput.value = '';
+          logContentInput.value = '';
+          galleryContainer.innerHTML = '<p style="color: #94a3b8; font-style: italic; grid-column: 1/-1;">Logbook telah dihapus.</p>';
+          loadListBtn.click();
+        }
+      } catch (err) {
+        log('Gagal menghapus logbook', err.message);
+      }
+    });
+
+    // 12. DELETE /users/me (Hapus Akun Pengguna)
+    deleteUserBtn.addEventListener('click', async () => {
+      const confirmText = deleteConfirmTextInput.value.trim();
+      if (confirmText !== 'HAPUS') {
+        alert('Ketik "HAPUS" dengan huruf besar pada kolom konfirmasi untuk melanjutkan!');
+        return;
+      }
+
+      if (!confirm('PERINGATAN: Akun Anda dan seluruh data logbook di database akan dihapus permanen. Lanjutkan?')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/users/me`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentAccessToken}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ confirm: 'HAPUS' }),
+        });
+
+        log(`DELETE /users/me -> ${res.status}`, res.status === 204 ? 'Akun Berhasil Dihapus (Sesi Berakhir)' : await res.json());
+
+        if (res.status === 204) {
+          deleteConfirmTextInput.value = '';
+          updateAuthUI(null);
+          galleryContainer.innerHTML = '<p style="color: #94a3b8; font-style: italic; grid-column: 1/-1;">Akun telah dihapus.</p>';
+          alert('Akun Anda berhasil dihapus.');
+        }
+      } catch (err) {
+        log('Gagal menghapus akun', err.message);
       }
     });
   </script>
 </body>
 </html>
-
