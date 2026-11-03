@@ -166,4 +166,4 @@ Client lalu menjalankan ulang alur login Google dengan `prompt: 'consent'`, dan 
 
 ## 7. Mode development tanpa Google (sementara)
 
-Sampai M4 selesai, endpoint logbook butuh user. Gunakan `DevAuthGuard` yang **hanya aktif bila `NODE_ENV=development` dan `DEV_AUTH_ENABLED=true`**: guard membaca header `X-Dev-User-Email` dan memakai user seed. Guard ini wajib dihapus atau dipastikan tidak terdaftar saat M4 selesai, dan aplikasi harus menolak start bila `DEV_AUTH_ENABLED=true` di `NODE_ENV=production`.
+Sampai M4 selesai, endpoint logbook butuh user. Gunakan `DevAuthGuard` yang **aktif bila `DEV_AUTH_ENABLED=true` dan `NODE_ENV` bukan `production` (`development` dan `test`)**: guard membaca header `X-Dev-User-Email` dan memakai user seed. Guard ini wajib dihapus atau dipastikan tidak terdaftar saat M4 selesai, dan aplikasi harus menolak start bila `DEV_AUTH_ENABLED=true` di `NODE_ENV=production`.
