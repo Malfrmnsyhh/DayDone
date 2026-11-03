@@ -60,10 +60,19 @@ export class ImageProcessorService {
         });
 
         // Tentukan output format:
-        // PNG dengan alpha channel dipertahankan sebagai PNG agar transparansi tidak hilang.
-        // Format lain dikonversi menjadi JPEG dengan optimasi mozjpeg kualitas 82.
+        // PNG hanya dipertahankan sebagai PNG bila benar-benar memiliki piksel transparan (!isOpaque).
+        // PNG opak atau format lain dikonversi menjadi JPEG dengan optimasi mozjpeg kualitas 82.
         let outputMimeType: string;
-        if (metadata.format === 'png' && metadata.hasAlpha) {
+        let isTransparentPng = false;
+
+        if (metadata.format === 'png') {
+          const stats = await image.stats();
+          if (!stats.isOpaque) {
+            isTransparentPng = true;
+          }
+        }
+
+        if (isTransparentPng) {
           image.png();
           outputMimeType = 'image/png';
         } else {

@@ -82,7 +82,7 @@ describe('ImageProcessorService', () => {
     expect(outputMeta.exif).toBeUndefined();
   });
 
-  it('mempertahankan format PNG bila gambar memiliki channel alpha (transparansi)', async () => {
+  it('mempertahankan format PNG bila gambar benar-benar memiliki piksel transparan (!isOpaque)', async () => {
     const transparentPng = await sharp({
       create: {
         width: 200,
@@ -97,6 +97,23 @@ describe('ImageProcessorService', () => {
     const result = await service.process(transparentPng);
 
     expect(result.mimeType).toBe('image/png');
+  });
+
+  it('mengonversi PNG RGBA yang opak (isOpaque: true) menjadi JPEG', async () => {
+    const opaqueRgbaPng = await sharp({
+      create: {
+        width: 100,
+        height: 100,
+        channels: 4,
+        background: { r: 255, g: 0, b: 0, alpha: 1 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await service.process(opaqueRgbaPng);
+
+    expect(result.mimeType).toBe('image/jpeg');
   });
 
   it('menolak file teks atau data corrupt dengan 415 UNSUPPORTED_FILE_TYPE', async () => {
