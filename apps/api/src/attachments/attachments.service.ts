@@ -207,7 +207,6 @@ export class AttachmentsService {
           position: att.position,
           url,
           urlExpiresAt: expiresAt.toISOString(),
-          createdAt: att.createdAt.toISOString(),
         };
       });
     } catch (dbError: unknown) {

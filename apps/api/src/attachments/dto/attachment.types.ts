@@ -8,7 +8,6 @@ export interface AttachmentResponse {
   position: number;
   url: string | null;
   urlExpiresAt: string | null;
-  createdAt: string;
 }
 
 export interface AttachmentUrlResponse {

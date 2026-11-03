@@ -283,9 +283,9 @@ describe('Attachments & Storage Integration (e2e)', () => {
     it('GET content dengan token yang diubah satu karakter ditolak dengan 401 Unauthorized', async () => {
       const urlObj = new URL(signedContentUrl);
       const originalToken = urlObj.searchParams.get('token')!;
-      const badToken =
-        originalToken.slice(0, -1) +
-        (originalToken.endsWith('z') ? 'a' : 'z');
+      const [payloadPart, sigPart] = originalToken.split('.');
+      const badSig = (sigPart.startsWith('a') ? 'b' : 'a') + sigPart.slice(1);
+      const badToken = `${payloadPart}.${badSig}`;
 
       const res = await request(app.getHttpServer()).get(
         `${urlObj.pathname}?token=${badToken}`,
