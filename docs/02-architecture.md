@@ -82,19 +82,18 @@ apps/api/src/
 
 ```mermaid
 flowchart TD
+    Logs --> Attachments
     Logs --> Prisma
-    Attachments --> Logs
     Attachments --> Storage
     Attachments --> Prisma
-    Storage --> GoogleOAuth[Auth: GoogleOAuthService]
-    Storage --> Users
     Auth --> Users
     Auth --> Prisma
     Users --> Prisma
     Users --> Storage
+    Storage --> Prisma
 ```
 
-Aturan: `Logs` tidak tahu soal Drive. `Attachments` adalah satu-satunya modul fitur yang memakai `StorageProvider`. `Users` memakainya hanya untuk membuat folder saat login dan mencabut akses saat hapus akun.
+Aturan: `Logs` tidak tahu soal Drive secara langsung; `Logs` mengimpor `Attachments` untuk menghasilkan URL lampiran dan memicu penghapusan file di storage saat logbook dihapus. `AttachmentsService` memverifikasi kepemilikan logbook langsung lewat `PrismaService` (`logEntry.userId`). `Storage` mengimplementasikan abstraksi `StorageProvider`. `Users` memakai `Storage` saat mencabut akses atau inisialisasi.
 
 ## 4. Abstraksi penyimpanan
 

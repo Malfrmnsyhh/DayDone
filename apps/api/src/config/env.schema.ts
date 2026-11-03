@@ -13,6 +13,10 @@ const envSchema = z
     PORT: z.coerce.number().int().positive().default(3000),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL wajib diisi'),
     DIRECT_URL: z.string().min(1, 'DIRECT_URL wajib diisi'),
+    PUBLIC_API_URL: z
+      .string()
+      .url('PUBLIC_API_URL harus berupa URL yang valid (misal http://localhost:3000)')
+      .default('http://localhost:3000'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
 
     // Google OAuth (M4)
@@ -61,6 +65,11 @@ const envSchema = z
       .union([z.boolean(), z.enum(['true', 'false'])])
       .default(true)
       .transform((val) => val === true || val === 'true'),
+
+    // Storage & URL Lampiran (M5)
+    ATTACHMENT_URL_SECRET: z
+      .string()
+      .min(32, 'ATTACHMENT_URL_SECRET minimal 32 karakter'),
   })
   .refine(
     (data) => !(data.NODE_ENV === 'production' && data.COOKIE_SECURE === false),

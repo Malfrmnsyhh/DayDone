@@ -16,6 +16,7 @@ describe('validateEnv', () => {
     GOOGLE_WEB_CLIENT_SECRET: 'google-client-secret-123',
     JWT_ACCESS_SECRET: validSecret32Chars,
     TOKEN_ENCRYPTION_KEY: valid32ByteBase64Key,
+    ATTACHMENT_URL_SECRET: validSecret32Chars,
   };
 
   it('berhasil memvalidasi konfigurasi yang lengkap dengan nilai default', () => {
@@ -35,6 +36,15 @@ describe('validateEnv', () => {
         JWT_ACCESS_SECRET: 'short-secret',
       }),
     ).toThrow('JWT_ACCESS_SECRET minimal 32 karakter');
+  });
+
+  it('menolak bila ATTACHMENT_URL_SECRET kurang dari 32 karakter', () => {
+    expect(() =>
+      validateEnv({
+        ...validConfig,
+        ATTACHMENT_URL_SECRET: 'short-attachment-secret',
+      }),
+    ).toThrow('ATTACHMENT_URL_SECRET minimal 32 karakter');
   });
 
   it('menolak bila TOKEN_ENCRYPTION_KEY bukan 32 byte base64', () => {
