@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import type { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import {
   CurrentUser,
   type CurrentUserData,
@@ -57,8 +57,28 @@ export class AuthController {
     );
   }
 
+  private getCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.cookieSecure,
+      sameSite: this.cookieSameSite,
+      path: '/api/v1/auth',
+      maxAge: this.refreshTtlDays * 24 * 60 * 60 * 1000,
+    };
+  }
+
+  private getClearCookieOptions(): CookieOptions {
+    return {
+      httpOnly: true,
+      secure: this.cookieSecure,
+      sameSite: this.cookieSameSite,
+      path: '/api/v1/auth',
+    };
+  }
+
   @Public()
   @Post('google')
+  @HttpCode(HttpStatus.OK)
   async googleLogin(
     @Body({ schema: googleLoginSchema }) dto: GoogleLoginDto,
     @Headers('user-agent') userAgent: string | undefined,
@@ -67,13 +87,7 @@ export class AuthController {
     const result = await this.authService.googleLogin(dto, userAgent);
 
     if (dto.platform === 'WEB') {
-      res.cookie('daydone_rt', result.rawSessionRefreshToken, {
-        httpOnly: true,
-        secure: this.cookieSecure,
-        sameSite: this.cookieSameSite,
-        path: '/api/v1/auth',
-        maxAge: this.refreshTtlDays * 24 * 60 * 60 * 1000,
-      });
+      res.cookie('daydone_rt', result.rawSessionRefreshToken, this.getCookieOptions());
 
       return {
         accessToken: result.accessToken,
@@ -92,6 +106,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(
     @Body({ schema: refreshTokenSchema }) dto: RefreshTokenDto,
     @Headers('user-agent') userAgent: string | undefined,
@@ -119,14 +134,8 @@ export class AuthController {
 
       const result = await this.authService.refresh(cookieToken, userAgent);
 
-      // Rotasi cookie refresh token dengan opsi yang sama
-      res.cookie('daydone_rt', result.rawSessionRefreshToken, {
-        httpOnly: true,
-        secure: this.cookieSecure,
-        sameSite: this.cookieSameSite,
-        path: '/api/v1/auth',
-        maxAge: this.refreshTtlDays * 24 * 60 * 60 * 1000,
-      });
+      // Rotasi cookie refresh token dengan opsi yang persis sama
+      res.cookie('daydone_rt', result.rawSessionRefreshToken, this.getCookieOptions());
 
       return {
         accessToken: result.accessToken,
@@ -170,11 +179,7 @@ export class AuthController {
         );
       }
 
-      res.clearCookie('daydone_rt', {
-        path: '/api/v1/auth',
-        sameSite: this.cookieSameSite,
-        secure: this.cookieSecure,
-      });
+      res.clearCookie('daydone_rt', this.getClearCookieOptions());
 
       if (cookieToken) {
         await this.authService.logout(cookieToken);

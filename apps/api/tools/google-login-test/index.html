@@ -262,6 +262,7 @@
 
     // 3. POST /auth/refresh
     refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
       try {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
@@ -280,6 +281,8 @@
         }
       } catch (err) {
         log('Gagal memanggil /auth/refresh', err.message);
+      } finally {
+        refreshBtn.disabled = false;
       }
     });
 

@@ -66,7 +66,7 @@ describe('Auth & Session Management (e2e)', () => {
           platform: 'MOBILE',
         });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();
       expect(res.body.user.email).toBe('dev-a@daydone.local');
@@ -89,7 +89,7 @@ describe('Auth & Session Management (e2e)', () => {
           platform: 'MOBILE',
         });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.user.driveStatus).toBe('CONNECTED');
 
       const dbUser = await prisma.user.findUnique({
@@ -106,7 +106,7 @@ describe('Auth & Session Management (e2e)', () => {
           platform: 'MOBILE',
         });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.user.driveStatus).toBe('NOT_CONNECTED');
     });
 
@@ -131,7 +131,7 @@ describe('Auth & Session Management (e2e)', () => {
           redirectUri: 'postmessage',
         });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.refreshToken).toBeUndefined(); // tidak di body
       expect(res.body.accessToken).toBeDefined();
 
@@ -177,7 +177,7 @@ describe('Auth & Session Management (e2e)', () => {
         .set('Cookie', [webCookie])
         .set('X-Requested-With', 'daydone-web');
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeUndefined();
 
@@ -187,12 +187,51 @@ describe('Auth & Session Management (e2e)', () => {
       expect(newWebCookie).not.toBe(webCookie);
     });
 
+    it('POST /api/v1/auth/refresh (Web): refresh berturut-turut dengan cookie dari response sebelumnya keduanya 200', async () => {
+      // 1. Login Web
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ code: 'code-dev-b', platform: 'WEB' });
+      expect(loginRes.status).toBe(200);
+
+      const cookie1Header = loginRes.headers['set-cookie'][0];
+      const cookie1 = cookie1Header.split(';')[0];
+
+      // 2. Refresh pertama
+      const refresh1Res = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', [cookie1])
+        .set('X-Requested-With', 'daydone-web');
+      expect(refresh1Res.status).toBe(200);
+      expect(refresh1Res.body.accessToken).toBeDefined();
+
+      const cookie2Header = refresh1Res.headers['set-cookie'][0];
+      const cookie2 = cookie2Header.split(';')[0];
+      expect(cookie2).not.toBe(cookie1);
+
+      // Pastikan atribut cookie di refresh1 identik dengan saat login
+      expect(cookie2Header).toContain('Path=/api/v1/auth');
+      expect(cookie2Header).toContain('HttpOnly');
+
+      // 3. Refresh kedua memakai cookie2 dari response sebelumnya
+      const refresh2Res = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', [cookie2])
+        .set('X-Requested-With', 'daydone-web');
+      expect(refresh2Res.status).toBe(200);
+      expect(refresh2Res.body.accessToken).toBeDefined();
+
+      const cookie3Header = refresh2Res.headers['set-cookie'][0];
+      const cookie3 = cookie3Header.split(';')[0];
+      expect(cookie3).not.toBe(cookie2);
+    });
+
     it('POST /api/v1/auth/refresh (Mobile): berhasil merotasi token dari body', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: mobileRefreshToken });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();
       expect(res.body.refreshToken).not.toBe(mobileRefreshToken);
