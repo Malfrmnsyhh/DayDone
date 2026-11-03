@@ -1,61 +1,113 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CurrentUserData } from '../common/decorators/current-user.decorator.js';
 import { LogsController } from './logs.controller.js';
 import { LogsService } from './logs.service.js';
 
 describe('LogsController', () => {
   let controller: LogsController;
-  let service: LogsService;
+  let mockLogsService: {
+    findAll: ReturnType<typeof vi.fn>;
+    findOne: ReturnType<typeof vi.fn>;
+    findByDate: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+  };
+
+  const mockUser: CurrentUserData = {
+    userId: '11111111-1111-4111-8111-111111111111',
+    email: 'user@daydone.local',
+  };
+
+  const mockLogResponse = {
+    id: '22222222-2222-4222-8222-222222222222',
+    date: '2026-11-01',
+    description: 'Test log',
+    attachments: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 
   beforeEach(async () => {
+    mockLogsService = {
+      findAll: vi.fn().mockResolvedValue({
+        data: [{ ...mockLogResponse, attachmentCount: 0 }],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      }),
+      findOne: vi.fn().mockResolvedValue(mockLogResponse),
+      findByDate: vi.fn().mockResolvedValue(mockLogResponse),
+      create: vi.fn().mockResolvedValue(mockLogResponse),
+      update: vi.fn().mockResolvedValue(mockLogResponse),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LogsController],
-      providers: [LogsService],
+      providers: [
+        {
+          provide: LogsService,
+          useValue: mockLogsService,
+        },
+      ],
     }).compile();
 
     controller = module.get<LogsController>(LogsController);
-    service = module.get<LogsService>(LogsService);
   });
 
-  it('harus memanggil create dan mengembalikan log baru', () => {
-    const log = controller.create({
+  it('harus memanggil create dengan userId dan mengembalikan log baru', async () => {
+    const result = await controller.create(mockUser, {
       date: '2026-11-01',
       description: 'Test log',
     });
-    expect(log.id).toBeDefined();
-    expect(log.date).toBe('2026-11-01');
-  });
-
-  it('harus memanggil findByDate dan mengembalikan log', () => {
-    const created = service.create({
-      date: '2026-11-02',
-      description: 'Log per tanggal',
-    });
-
-    const result = controller.findByDate({ date: '2026-11-02' });
-    expect(result.id).toBe(created.id);
-  });
-
-  it('harus memanggil findAll dengan query filter', () => {
-    service.create({ date: '2026-11-01', description: 'Alpha' });
-    service.create({ date: '2026-11-02', description: 'Beta' });
-
-    const results = controller.findAll({ search: 'alpha' });
-    expect(results).toHaveLength(1);
-    expect(results[0].description).toBe('Alpha');
-  });
-
-  it('harus memanggil update dan mengembalikan log terupdate', () => {
-    const created = service.create({ date: '2026-11-01', description: 'Old' });
-    const updated = controller.update(created.id, { description: 'New' });
-    expect(updated.description).toBe('New');
-  });
-
-  it('harus memanggil remove untuk menghapus log', () => {
-    const created = service.create({
+    expect(mockLogsService.create).toHaveBeenCalledWith(mockUser.userId, {
       date: '2026-11-01',
-      description: 'To delete',
+      description: 'Test log',
     });
-    expect(() => controller.remove(created.id)).not.toThrow();
+    expect(result.id).toBe(mockLogResponse.id);
+  });
+
+  it('harus memanggil findByDate dengan userId dan date', async () => {
+    const result = await controller.findByDate(mockUser, {
+      date: '2026-11-01',
+    });
+    expect(mockLogsService.findByDate).toHaveBeenCalledWith(
+      mockUser.userId,
+      '2026-11-01',
+    );
+    expect(result.date).toBe('2026-11-01');
+  });
+
+  it('harus memanggil findAll dengan userId dan query filter', async () => {
+    const query = { page: 1, limit: 20, search: 'test' };
+    const result = await controller.findAll(mockUser, query);
+    expect(mockLogsService.findAll).toHaveBeenCalledWith(
+      mockUser.userId,
+      query,
+    );
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.total).toBe(1);
+  });
+
+  it('harus memanggil update dengan userId, id, dan dto', async () => {
+    const result = await controller.update(mockUser, mockLogResponse.id, {
+      description: 'Updated',
+    });
+    expect(mockLogsService.update).toHaveBeenCalledWith(
+      mockUser.userId,
+      mockLogResponse.id,
+      {
+        description: 'Updated',
+      },
+    );
+    expect(result.id).toBe(mockLogResponse.id);
+  });
+
+  it('harus memanggil remove dengan userId dan id', async () => {
+    await controller.remove(mockUser, mockLogResponse.id);
+    expect(mockLogsService.remove).toHaveBeenCalledWith(
+      mockUser.userId,
+      mockLogResponse.id,
+    );
   });
 });

@@ -1,84 +1,219 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { toDbDate } from '../common/date.js';
+import { DomainException } from '../common/errors/domain.exception.js';
+import { ErrorCode } from '../common/errors/error-codes.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 import type {
   CreateLogDto,
   ListLogsQuery,
   UpdateLogDto,
 } from './dto/log.schema.js';
-import type { LogEntry } from './log-entry.js';
+import {
+  toLogListItemResponse,
+  toLogResponse,
+  type LogResponse,
+  type PaginatedLogsResponse,
+} from './logs.mapper.js';
 
 @Injectable()
 export class LogsService {
-  private logs: LogEntry[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  findAll(query: ListLogsQuery): LogEntry[] {
-    const searchLower = query.search?.toLowerCase();
+  async findAll(
+    userId: string,
+    query: ListLogsQuery,
+  ): Promise<PaginatedLogsResponse> {
+    const where: Prisma.LogEntryWhereInput = {
+      userId,
+    };
 
-    return this.logs
-      .filter((log) => !query.from || log.date >= query.from)
-      .filter((log) => !query.to || log.date <= query.to)
-      .filter(
-        (log) =>
-          !searchLower || log.description.toLowerCase().includes(searchLower),
-      )
-      .sort((a, b) => b.date.localeCompare(a.date)); // terbaru di atas
+    if (query.from || query.to) {
+      where.date = {};
+      if (query.from) {
+        where.date.gte = toDbDate(query.from);
+      }
+      if (query.to) {
+        where.date.lte = toDbDate(query.to);
+      }
+    }
+
+    if (query.search) {
+      where.description = {
+        contains: query.search,
+        mode: 'insensitive',
+      };
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const [total, logs] = await this.prisma.$transaction([
+      this.prisma.logEntry.count({ where }),
+      this.prisma.logEntry.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: {
+          attachments: {
+            orderBy: { position: 'asc' },
+            take: 1,
+          },
+          _count: {
+            select: { attachments: true },
+          },
+        },
+      }),
+    ]);
+
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+
+    return {
+      data: logs.map(toLogListItemResponse),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
   }
 
-  findOne(id: string): LogEntry {
-    const log = this.logs.find((item) => item.id === id);
+  async findOne(userId: string, id: string): Promise<LogResponse> {
+    const log = await this.prisma.logEntry.findFirst({
+      where: { id, userId },
+      include: {
+        attachments: {
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+
     if (!log) {
       throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
     }
-    return log;
+
+    return toLogResponse(log);
   }
 
-  findByDate(date: string): LogEntry {
-    const log = this.logs.find((item) => item.date === date);
+  async findByDate(userId: string, date: string): Promise<LogResponse> {
+    const dbDate = toDbDate(date);
+    const log = await this.prisma.logEntry.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date: dbDate,
+        },
+      },
+      include: {
+        attachments: {
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+
     if (!log) {
       throw new NotFoundException(
         `Logbook untuk tanggal ${date} tidak ditemukan`,
       );
     }
-    return log;
+
+    return toLogResponse(log);
   }
 
-  create(dto: CreateLogDto): LogEntry {
-    this.ensureDateAvailable(dto.date);
+  async create(userId: string, dto: CreateLogDto): Promise<LogResponse> {
+    const dbDate = toDbDate(dto.date);
 
-    const now = new Date().toISOString();
-    const log: LogEntry = {
-      id: randomUUID(),
-      ...dto,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.logs.push(log);
-    return log;
-  }
+    try {
+      const log = await this.prisma.logEntry.create({
+        data: {
+          userId,
+          date: dbDate,
+          description: dto.description,
+        },
+        include: {
+          attachments: {
+            orderBy: { position: 'asc' },
+          },
+        },
+      });
 
-  update(id: string, dto: UpdateLogDto): LogEntry {
-    const log = this.findOne(id);
+      return toLogResponse(log);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existing = await this.prisma.logEntry.findFirst({
+          where: { userId, date: dbDate },
+          select: { id: true },
+        });
 
-    if (dto.date && dto.date !== log.date) {
-      this.ensureDateAvailable(dto.date);
+        throw new DomainException(
+          HttpStatus.CONFLICT,
+          `Logbook untuk tanggal ${dto.date} sudah ada`,
+          ErrorCode.LOG_DATE_CONFLICT,
+          { existingLogId: existing?.id },
+        );
+      }
+      throw error;
     }
-
-    Object.assign(log, dto, { updatedAt: new Date().toISOString() });
-    return log;
   }
 
-  remove(id: string): void {
-    this.findOne(id); // lempar 404 kalau tidak ada
-    this.logs = this.logs.filter((item) => item.id !== id);
-  }
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateLogDto,
+  ): Promise<LogResponse> {
+    // Pastikan logbook ada dan milik pengguna (lempar 404 jika bukan)
+    await this.findOne(userId, id);
 
-  private ensureDateAvailable(date: string): void {
-    if (this.logs.some((item) => item.date === date)) {
-      throw new ConflictException(`Logbook untuk tanggal ${date} sudah ada`);
+    const dbDate = dto.date ? toDbDate(dto.date) : undefined;
+
+    try {
+      const updated = await this.prisma.logEntry.update({
+        where: { id },
+        data: {
+          date: dbDate,
+          description: dto.description,
+        },
+        include: {
+          attachments: {
+            orderBy: { position: 'asc' },
+          },
+        },
+      });
+
+      return toLogResponse(updated);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existing = await this.prisma.logEntry.findFirst({
+          where: { userId, date: dbDate },
+          select: { id: true },
+        });
+
+        throw new DomainException(
+          HttpStatus.CONFLICT,
+          `Logbook untuk tanggal ${dto.date} sudah ada`,
+          ErrorCode.LOG_DATE_CONFLICT,
+          { existingLogId: existing?.id },
+        );
+      }
+      throw error;
     }
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    // Pastikan logbook ada dan milik pengguna (lempar 404 jika bukan)
+    await this.findOne(userId, id);
+
+    await this.prisma.logEntry.delete({
+      where: { id },
+    });
   }
 }

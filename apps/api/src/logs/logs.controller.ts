@@ -11,7 +11,10 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { LogsService } from './logs.service.js';
+import {
+  CurrentUser,
+  type CurrentUserData,
+} from '../common/decorators/current-user.decorator.js';
 import {
   createLogSchema,
   dateParamSchema,
@@ -22,42 +25,60 @@ import {
   type ListLogsQuery,
   type UpdateLogDto,
 } from './dto/log.schema.js';
+import type { LogResponse, PaginatedLogsResponse } from './logs.mapper.js';
+import { LogsService } from './logs.service.js';
 
 @Controller('logs')
 export class LogsController {
   constructor(private readonly logsService: LogsService) {}
 
   @Get()
-  findAll(@Query({ schema: listLogsQuerySchema }) query: ListLogsQuery) {
-    return this.logsService.findAll(query);
+  findAll(
+    @CurrentUser() user: CurrentUserData,
+    @Query({ schema: listLogsQuerySchema }) query: ListLogsQuery,
+  ): Promise<PaginatedLogsResponse> {
+    return this.logsService.findAll(user.userId, query);
   }
 
   @Get('by-date/:date')
-  findByDate(@Param({ schema: dateParamSchema }) params: DateParam) {
-    return this.logsService.findByDate(params.date);
+  findByDate(
+    @CurrentUser() user: CurrentUserData,
+    @Param({ schema: dateParamSchema }) params: DateParam,
+  ): Promise<LogResponse> {
+    return this.logsService.findByDate(user.userId, params.date);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.logsService.findOne(id);
+  findOne(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<LogResponse> {
+    return this.logsService.findOne(user.userId, id);
   }
 
   @Post()
-  create(@Body({ schema: createLogSchema }) dto: CreateLogDto) {
-    return this.logsService.create(dto);
+  create(
+    @CurrentUser() user: CurrentUserData,
+    @Body({ schema: createLogSchema }) dto: CreateLogDto,
+  ): Promise<LogResponse> {
+    return this.logsService.create(user.userId, dto);
   }
 
   @Patch(':id')
   update(
+    @CurrentUser() user: CurrentUserData,
     @Param('id', ParseUUIDPipe) id: string,
     @Body({ schema: updateLogSchema }) dto: UpdateLogDto,
-  ) {
-    return this.logsService.update(id, dto);
+  ): Promise<LogResponse> {
+    return this.logsService.update(user.userId, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    this.logsService.remove(id);
+  remove(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.logsService.remove(user.userId, id);
   }
 }

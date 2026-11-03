@@ -1,217 +1,212 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DomainException } from '../common/errors/domain.exception.js';
+import { ErrorCode } from '../common/errors/error-codes.js';
+import { Prisma } from '../generated/prisma/client.js';
+import type { PrismaService } from '../prisma/prisma.service.js';
 import { LogsService } from './logs.service.js';
 
 describe('LogsService', () => {
   let service: LogsService;
+  let mockPrisma: any;
+
+  const userId = '11111111-1111-4111-8111-111111111111';
+  const dummyLogEntry = {
+    id: '22222222-2222-4222-8222-222222222222',
+    userId,
+    date: new Date('2026-11-01T00:00:00.000Z'),
+    description: 'Deskripsi logbook',
+    createdAt: new Date('2026-11-01T10:00:00.000Z'),
+    updatedAt: new Date('2026-11-01T10:00:00.000Z'),
+    attachments: [],
+  };
 
   beforeEach(() => {
-    service = new LogsService();
+    mockPrisma = {
+      logEntry: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
+        count: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      $transaction: vi.fn(),
+    };
+
+    service = new LogsService(mockPrisma as unknown as PrismaService);
   });
 
   describe('create', () => {
-    it('harus berhasil membuat logbook baru', () => {
-      const log = service.create({
+    it('harus berhasil membuat logbook baru', async () => {
+      mockPrisma.logEntry.create.mockResolvedValue(dummyLogEntry);
+
+      const result = await service.create(userId, {
         date: '2026-11-01',
-        description: 'Mengerjakan fitur auth',
+        description: 'Deskripsi logbook',
       });
 
-      expect(log.id).toBeDefined();
-      expect(log.date).toBe('2026-11-01');
-      expect(log.description).toBe('Mengerjakan fitur auth');
-      expect(log.createdAt).toBeDefined();
-      expect(log.updatedAt).toBeDefined();
+      expect(result.id).toBe(dummyLogEntry.id);
+      expect(result.date).toBe('2026-11-01');
+      expect(mockPrisma.logEntry.create).toHaveBeenCalled();
     });
 
-    it('harus melempar ConflictException jika tanggal sudah ada', () => {
-      service.create({
-        date: '2026-11-01',
-        description: 'Log hari pertama',
-      });
+    it('harus menangkap P2002 dan melempar DomainException LOG_DATE_CONFLICT beserta existingLogId', async () => {
+      const p2002Error = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '7.10.1',
+        },
+      );
+      mockPrisma.logEntry.create.mockRejectedValue(p2002Error);
+      mockPrisma.logEntry.findFirst.mockResolvedValue({ id: 'existing-id-123' });
 
-      expect(() =>
-        service.create({
+      try {
+        await service.create(userId, {
           date: '2026-11-01',
-          description: 'Log duplikat tanggal',
-        }),
-      ).toThrow(ConflictException);
+          description: 'Duplikat',
+        });
+        expect.unreachable('Harus melempar DomainException');
+      } catch (err) {
+        expect(err).toBeInstanceOf(DomainException);
+        const domainErr = err as DomainException;
+        expect(domainErr.getStatus()).toBe(HttpStatus.CONFLICT);
+        expect(domainErr.code).toBe(ErrorCode.LOG_DATE_CONFLICT);
+        expect(domainErr.details).toEqual({ existingLogId: 'existing-id-123' });
+      }
     });
   });
 
   describe('findOne & findByDate', () => {
-    it('harus mengembalikan log sesuai id', () => {
-      const created = service.create({
-        date: '2026-11-01',
-        description: 'Belajar NestJS',
-      });
+    it('harus mengembalikan log sesuai id dan userId', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
 
-      const found = service.findOne(created.id);
-      expect(found).toEqual(created);
+      const result = await service.findOne(userId, dummyLogEntry.id);
+      expect(result.id).toBe(dummyLogEntry.id);
+      expect(mockPrisma.logEntry.findFirst).toHaveBeenCalledWith({
+        where: { id: dummyLogEntry.id, userId },
+        include: {
+          attachments: {
+            orderBy: { position: 'asc' },
+          },
+        },
+      });
     });
 
-    it('harus melempar NotFoundException jika id tidak ditemukan', () => {
-      expect(() => service.findOne('non-existent-id')).toThrow(
+    it('harus melempar NotFoundException jika id tidak ditemukan atau milik user lain', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(null);
+
+      await expect(service.findOne(userId, 'unknown-id')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('harus mengembalikan log sesuai tanggal', () => {
-      const created = service.create({
-        date: '2026-11-02',
-        description: 'Belajar Vitest',
-      });
+    it('harus mengembalikan log sesuai tanggal via unique userId_date', async () => {
+      mockPrisma.logEntry.findUnique.mockResolvedValue(dummyLogEntry);
 
-      const found = service.findByDate('2026-11-02');
-      expect(found).toEqual(created);
+      const result = await service.findByDate(userId, '2026-11-01');
+      expect(result.id).toBe(dummyLogEntry.id);
+      expect(mockPrisma.logEntry.findUnique).toHaveBeenCalled();
     });
 
-    it('harus melempar NotFoundException jika tanggal belum ada logbook', () => {
-      expect(() => service.findByDate('2026-11-03')).toThrow(NotFoundException);
+    it('harus melempar NotFoundException jika tanggal belum ada logbook', async () => {
+      mockPrisma.logEntry.findUnique.mockResolvedValue(null);
+
+      await expect(service.findByDate(userId, '2026-11-01')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('update', () => {
-    it('harus berhasil memperbarui deskripsi logbook', () => {
-      const created = service.create({
-        date: '2026-11-01',
-        description: 'Deskripsi lama',
+    it('harus berhasil memperbarui logbook', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
+      mockPrisma.logEntry.update.mockResolvedValue({
+        ...dummyLogEntry,
+        description: 'Updated deskripsi',
       });
 
-      const updated = service.update(created.id, {
-        description: 'Deskripsi baru',
+      const result = await service.update(userId, dummyLogEntry.id, {
+        description: 'Updated deskripsi',
       });
-
-      expect(updated.description).toBe('Deskripsi baru');
-      expect(updated.date).toBe('2026-11-01');
+      expect(result.description).toBe('Updated deskripsi');
     });
 
-    it('harus berhasil memperbarui tanggal jika tanggal baru belum terpakai', () => {
-      const created = service.create({
-        date: '2026-11-01',
-        description: 'Deskripsi log',
-      });
+    it('harus melempar LOG_DATE_CONFLICT jika update tanggal menyebabkan P2002', async () => {
+      mockPrisma.logEntry.findFirst
+        .mockResolvedValueOnce(dummyLogEntry) // findOne check
+        .mockResolvedValueOnce({ id: 'existing-other-id' }); // findFirst for existing conflict
+      const p2002Error = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '7.10.1',
+        },
+      );
+      mockPrisma.logEntry.update.mockRejectedValue(p2002Error);
 
-      const updated = service.update(created.id, {
-        date: '2026-11-02',
-      });
-
-      expect(updated.date).toBe('2026-11-02');
-    });
-
-    it('harus melempar ConflictException jika mengubah tanggal ke tanggal yang sudah ada di log lain', () => {
-      service.create({
-        date: '2026-11-01',
-        description: 'Log 1',
-      });
-      const log2 = service.create({
-        date: '2026-11-02',
-        description: 'Log 2',
-      });
-
-      expect(() =>
-        service.update(log2.id, {
-          date: '2026-11-01',
-        }),
-      ).toThrow(ConflictException);
-    });
-
-    it('tidak boleh melempar ConflictException jika tanggal yang diupdate sama dengan tanggal saat ini', () => {
-      const created = service.create({
-        date: '2026-11-01',
-        description: 'Log awal',
-      });
-
-      expect(() =>
-        service.update(created.id, {
-          date: '2026-11-01',
-          description: 'Log awal diperbarui',
-        }),
-      ).not.toThrow();
-    });
-
-    it('harus melempar NotFoundException jika id tidak ditemukan saat update', () => {
-      expect(() =>
-        service.update('random-id', { description: 'Baru' }),
-      ).toThrow(NotFoundException);
+      await expect(
+        service.update(userId, dummyLogEntry.id, { date: '2026-11-02' }),
+      ).rejects.toThrow(DomainException);
     });
   });
 
   describe('remove', () => {
-    it('harus berhasil menghapus logbook', () => {
-      const created = service.create({
-        date: '2026-11-01',
-        description: 'Log akan dihapus',
+    it('harus menghapus logbook jika ditemukan dan milik pengguna', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
+      mockPrisma.logEntry.delete.mockResolvedValue(dummyLogEntry);
+
+      await expect(
+        service.remove(userId, dummyLogEntry.id),
+      ).resolves.toBeUndefined();
+      expect(mockPrisma.logEntry.delete).toHaveBeenCalledWith({
+        where: { id: dummyLogEntry.id },
       });
-
-      service.remove(created.id);
-
-      expect(() => service.findOne(created.id)).toThrow(NotFoundException);
     });
 
-    it('harus melempar NotFoundException jika id yang akan dihapus tidak ada', () => {
-      expect(() => service.remove('non-existent-id')).toThrow(
+    it('harus melempar NotFoundException jika id tidak ditemukan saat remove', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(null);
+
+      await expect(service.remove(userId, 'unknown-id')).rejects.toThrow(
         NotFoundException,
       );
+      expect(mockPrisma.logEntry.delete).not.toHaveBeenCalled();
     });
   });
 
   describe('findAll', () => {
-    beforeEach(() => {
-      service.create({
-        date: '2026-11-01',
-        description: 'Setup database PostgreSQL',
+    it('harus mengembalikan daftar log terpaginasi dengan meta yang benar', async () => {
+      mockPrisma.$transaction.mockResolvedValue([
+        25, // total
+        [dummyLogEntry], // items
+      ]);
+
+      const result = await service.findAll(userId, {
+        page: 2,
+        limit: 10,
+        search: 'magang',
       });
-      service.create({
-        date: '2026-11-02',
-        description: 'Implementasi API endpoint logbook',
+
+      expect(result.data).toHaveLength(1);
+      expect(result.meta.page).toBe(2);
+      expect(result.meta.limit).toBe(10);
+      expect(result.meta.total).toBe(25);
+      expect(result.meta.totalPages).toBe(3); // ceil(25 / 10)
+    });
+
+    it('harus mengembalikan totalPages 0 bila total 0', async () => {
+      mockPrisma.$transaction.mockResolvedValue([0, []]);
+
+      const result = await service.findAll(userId, {
+        page: 1,
+        limit: 20,
       });
-      service.create({
-        date: '2026-11-03',
-        description: 'Menulis unit test dengan Vitest',
-      });
-    });
 
-    it('harus mengembalikan semua log terurut tanggal menurun (terbaru di atas)', () => {
-      const logs = service.findAll({});
-      expect(logs).toHaveLength(3);
-      expect(logs[0].date).toBe('2026-11-03');
-      expect(logs[1].date).toBe('2026-11-02');
-      expect(logs[2].date).toBe('2026-11-01');
-    });
-
-    it('harus memfilter berdasarkan parameter from', () => {
-      const logs = service.findAll({ from: '2026-11-02' });
-      expect(logs).toHaveLength(2);
-      expect(logs.map((l) => l.date)).toEqual(['2026-11-03', '2026-11-02']);
-    });
-
-    it('harus memfilter berdasarkan parameter to', () => {
-      const logs = service.findAll({ to: '2026-11-02' });
-      expect(logs).toHaveLength(2);
-      expect(logs.map((l) => l.date)).toEqual(['2026-11-02', '2026-11-01']);
-    });
-
-    it('harus memfilter berdasarkan rentang from dan to', () => {
-      const logs = service.findAll({
-        from: '2026-11-02',
-        to: '2026-11-02',
-      });
-      expect(logs).toHaveLength(1);
-      expect(logs[0].date).toBe('2026-11-02');
-    });
-
-    it('harus memfilter berdasarkan search secara case-insensitive', () => {
-      const logsUpper = service.findAll({ search: 'DATABASE' });
-      expect(logsUpper).toHaveLength(1);
-      expect(logsUpper[0].date).toBe('2026-11-01');
-
-      const logsLower = service.findAll({ search: 'vitest' });
-      expect(logsLower).toHaveLength(1);
-      expect(logsLower[0].date).toBe('2026-11-03');
-
-      const logsPartial = service.findAll({ search: 'endpoint' });
-      expect(logsPartial).toHaveLength(1);
-      expect(logsPartial[0].date).toBe('2026-11-02');
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(0);
     });
   });
 });
