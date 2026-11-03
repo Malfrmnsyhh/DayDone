@@ -37,4 +37,3 @@ export function validateEnv(config: Record<string, unknown>): Env {
 
   return result.data;
 }
-

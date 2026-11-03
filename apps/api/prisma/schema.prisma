@@ -88,3 +88,4 @@ model Attachment {
   @@index([logEntryId, position])
   @@map("attachments")
 }
+
