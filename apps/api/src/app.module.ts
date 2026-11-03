@@ -14,6 +14,7 @@ import { LogsModule } from './logs/logs.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
+import { UsersModule } from './users/users.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -45,6 +46,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     LogsModule,
     StorageModule,
     AttachmentsModule,
+    UsersModule,
   ],
   controllers: [],
   providers: [
