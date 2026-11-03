@@ -2,44 +2,66 @@ import { describe, expect, it } from 'vitest';
 import { validateEnv } from './env.schema.js';
 
 describe('validateEnv', () => {
-  const validBaseConfig = {
+  // 32-byte key base64 (contoh: 32 karakter 'a' = 32 bytes)
+  const valid32ByteBase64Key = Buffer.alloc(32, 1).toString('base64');
+  const validSecret32Chars = 'super-secret-jwt-key-min-32-characters-long!';
+
+  const validConfig = {
     NODE_ENV: 'development',
     PORT: '3000',
-    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/daydone',
-    DIRECT_URL: 'postgresql://postgres:postgres@localhost:5432/daydone',
+    DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+    DIRECT_URL: 'postgresql://user:pass@localhost:5432/db',
+    CORS_ORIGINS: 'http://localhost:5173',
+    GOOGLE_WEB_CLIENT_ID: 'google-client-id-123',
+    GOOGLE_WEB_CLIENT_SECRET: 'google-client-secret-123',
+    JWT_ACCESS_SECRET: validSecret32Chars,
+    TOKEN_ENCRYPTION_KEY: valid32ByteBase64Key,
   };
 
-  it('harus berhasil memvalidasi konfigurasi yang benar', () => {
-    const env = validateEnv(validBaseConfig);
+  it('berhasil memvalidasi konfigurasi yang lengkap dengan nilai default', () => {
+    const env = validateEnv(validConfig);
     expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3000);
-    expect(env.DEV_AUTH_ENABLED).toBe(false);
+    expect(env.JWT_ACCESS_TTL).toBe('15m');
+    expect(env.REFRESH_TOKEN_TTL_DAYS).toBe(30);
+    expect(env.COOKIE_SAMESITE).toBe('lax');
+    expect(env.COOKIE_SECURE).toBe(true);
   });
 
-  it('harus mengonversi DEV_AUTH_ENABLED dari string "true" ke boolean true', () => {
-    const env = validateEnv({
-      ...validBaseConfig,
-      DEV_AUTH_ENABLED: 'true',
-    });
-    expect(env.DEV_AUTH_ENABLED).toBe(true);
-  });
-
-  it('harus menolak start bila DEV_AUTH_ENABLED=true di lingkungan production', () => {
+  it('menolak bila JWT_ACCESS_SECRET kurang dari 32 karakter', () => {
     expect(() =>
       validateEnv({
-        ...validBaseConfig,
+        ...validConfig,
+        JWT_ACCESS_SECRET: 'short-secret',
+      }),
+    ).toThrow('JWT_ACCESS_SECRET minimal 32 karakter');
+  });
+
+  it('menolak bila TOKEN_ENCRYPTION_KEY bukan 32 byte base64', () => {
+    expect(() =>
+      validateEnv({
+        ...validConfig,
+        TOKEN_ENCRYPTION_KEY: Buffer.alloc(16).toString('base64'),
+      }),
+    ).toThrow('TOKEN_ENCRYPTION_KEY harus berupa string base64');
+  });
+
+  it('menolak bila COOKIE_SECURE bernilai false di lingkungan production', () => {
+    expect(() =>
+      validateEnv({
+        ...validConfig,
         NODE_ENV: 'production',
-        DEV_AUTH_ENABLED: 'true',
+        COOKIE_SECURE: 'false',
       }),
-    ).toThrow('DEV_AUTH_ENABLED dilarang aktif di lingkungan production!');
+    ).toThrow('COOKIE_SECURE tidak boleh false di lingkungan production');
   });
 
-  it('harus menolak bila DATABASE_URL atau DIRECT_URL tidak ada', () => {
-    expect(() =>
-      validateEnv({
-        NODE_ENV: 'development',
-      }),
-    ).toThrow('Konfigurasi lingkungan tidak valid');
+  it('mengizinkan COOKIE_SECURE false di development', () => {
+    const env = validateEnv({
+      ...validConfig,
+      NODE_ENV: 'development',
+      COOKIE_SECURE: 'false',
+    });
+    expect(env.COOKIE_SECURE).toBe(false);
   });
 });
-

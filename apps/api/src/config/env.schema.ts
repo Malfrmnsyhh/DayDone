@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 /**
  * Schema validasi variabel lingkungan untuk DayDone API.
- * Variabel Google OAuth (M4), JWT (M4), enkripsi token (M4), dan
- * signed URL (M5) ditambahkan di milestone masing-masing.
+ * Menjamin semua konfigurasi krusial untuk database, Google OAuth,
+ * JWT sesi, dan enkripsi token tervalidasi saat aplikasi dimulai.
  */
 const envSchema = z
   .object({
@@ -14,16 +14,59 @@ const envSchema = z
     DATABASE_URL: z.string().min(1, 'DATABASE_URL wajib diisi'),
     DIRECT_URL: z.string().min(1, 'DIRECT_URL wajib diisi'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
-    DEV_AUTH_ENABLED: z
+
+    // Google OAuth (M4)
+    GOOGLE_WEB_CLIENT_ID: z
+      .string()
+      .min(1, 'GOOGLE_WEB_CLIENT_ID wajib diisi'),
+    GOOGLE_WEB_CLIENT_SECRET: z
+      .string()
+      .min(1, 'GOOGLE_WEB_CLIENT_SECRET wajib diisi'),
+
+    // JWT Access Token (M4)
+    JWT_ACCESS_SECRET: z
+      .string()
+      .min(32, 'JWT_ACCESS_SECRET minimal 32 karakter'),
+    JWT_ACCESS_TTL: z.string().default('15m'),
+
+    // Sesi DayDone (M4)
+    REFRESH_TOKEN_TTL_DAYS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30),
+
+    // Enkripsi Token Google (M4)
+    TOKEN_ENCRYPTION_KEY: z
+      .string()
+      .min(1, 'TOKEN_ENCRYPTION_KEY wajib diisi')
+      .refine(
+        (val) => {
+          try {
+            const buf = Buffer.from(val, 'base64');
+            return buf.length === 32;
+          } catch {
+            return false;
+          }
+        },
+        {
+          message:
+            'TOKEN_ENCRYPTION_KEY harus berupa string base64 yang menghasilkan tepat 32 byte',
+        },
+      ),
+
+    // Konfigurasi Cookie Web (M4)
+    COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+    COOKIE_SECURE: z
       .union([z.boolean(), z.enum(['true', 'false'])])
-      .default(false)
+      .default(true)
       .transform((val) => val === true || val === 'true'),
   })
   .refine(
-    (data) => !(data.DEV_AUTH_ENABLED && data.NODE_ENV === 'production'),
+    (data) => !(data.NODE_ENV === 'production' && data.COOKIE_SECURE === false),
     {
-      message: 'DEV_AUTH_ENABLED dilarang aktif di lingkungan production!',
-      path: ['DEV_AUTH_ENABLED'],
+      message: 'COOKIE_SECURE tidak boleh false di lingkungan production!',
+      path: ['COOKIE_SECURE'],
     },
   );
 
