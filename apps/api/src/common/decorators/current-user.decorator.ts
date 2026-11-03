@@ -2,12 +2,12 @@ import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 export interface CurrentUserData {
   userId: string;
-  email?: string;
+  sessionId: string;
 }
 
 /**
- * Mengambil informasi pengguna yang terautentikasi dari request (disimpan oleh Guard).
- * Mengembalikan objek { userId: string, email?: string }.
+ * Mengambil informasi pengguna dan sesi yang terautentikasi dari request (disimpan oleh JwtAuthGuard).
+ * Mengembalikan objek { userId: string, sessionId: string }.
  */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): CurrentUserData => {
@@ -15,4 +15,3 @@ export const CurrentUser = createParamDecorator(
     return request.user;
   },
 );
-

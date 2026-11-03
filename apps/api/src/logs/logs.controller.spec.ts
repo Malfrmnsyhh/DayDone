@@ -17,7 +17,7 @@ describe('LogsController', () => {
 
   const mockUser: CurrentUserData = {
     userId: '11111111-1111-4111-8111-111111111111',
-    email: 'user@daydone.local',
+    sessionId: 'session-uuid-1',
   };
 
   const mockLogResponse = {

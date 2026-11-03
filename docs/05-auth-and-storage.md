@@ -164,6 +164,6 @@ Client lalu menjalankan ulang alur login Google dengan `prompt: 'consent'`, dan 
 3. Hapus cookie refresh token (web).
 4. File di Drive tidak dihapus; client menampilkan informasi ini sebelum konfirmasi.
 
-## 7. Mode development tanpa Google (sementara)
+## 7. Mode development tanpa Google (Selesai — Digantikan oleh JwtAuthGuard)
 
-Sampai M4 selesai, endpoint logbook butuh user. Gunakan `DevAuthGuard` yang **aktif bila `DEV_AUTH_ENABLED=true` dan `NODE_ENV` bukan `production` (`development` dan `test`)**: guard membaca header `X-Dev-User-Email` dan memakai user seed. Guard ini wajib dihapus atau dipastikan tidak terdaftar saat M4 selesai, dan aplikasi harus menolak start bila `DEV_AUTH_ENABLED=true` di `NODE_ENV=production`.
+Pada Milestone M3 digunakan `DevAuthGuard` sementara. Setelah Milestone M4 selesai, `DevAuthGuard` dan variabel `DEV_AUTH_ENABLED` **telah dihapus sepenuhnya**. Seluruh endpoint kini diproteksi oleh `JwtAuthGuard` global, dan pengujian otomatis/development menggunakan `FakeGoogleOAuthService` atau token JWT resmi.
