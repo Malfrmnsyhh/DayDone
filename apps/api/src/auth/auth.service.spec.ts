@@ -26,6 +26,9 @@ describe('AuthService', () => {
   let mockGoogleOAuth: {
     exchangeCode: ReturnType<typeof vi.fn>;
   };
+  let mockStorage: {
+    ensureAppFolder: ReturnType<typeof vi.fn>;
+  };
 
   const dummyUser = {
     id: 'user-uuid-1',
@@ -83,6 +86,10 @@ describe('AuthService', () => {
       }),
     };
 
+    mockStorage = {
+      ensureAppFolder: vi.fn().mockResolvedValue('folder-123'),
+    };
+
     service = new AuthService(
       mockPrisma as unknown as PrismaService,
       mockConfig,
@@ -90,6 +97,7 @@ describe('AuthService', () => {
       mockEncryption as unknown as EncryptionService,
       mockSessions as unknown as SessionsService,
       mockGoogleOAuth as unknown as GoogleOAuthService,
+      mockStorage as any,
     );
   });
 

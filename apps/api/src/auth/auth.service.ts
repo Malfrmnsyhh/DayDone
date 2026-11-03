@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +13,10 @@ import {
   type User,
 } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  STORAGE_PROVIDER,
+  type StorageProvider,
+} from '../storage/storage.interface.js';
 import type { GoogleLoginDto } from './dto/auth.schema.js';
 import type {
   AuthResponse,
@@ -26,6 +31,7 @@ import { SessionsService } from './sessions/sessions.service.js';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly jwtAccessTtl: string;
 
   constructor(
@@ -36,6 +42,8 @@ export class AuthService {
     private readonly sessionsService: SessionsService,
     @Inject(GOOGLE_OAUTH_SERVICE)
     private readonly googleOAuthService: GoogleOAuthService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: StorageProvider,
   ) {
     this.jwtAccessTtl = this.configService.get<string>(
       'JWT_ACCESS_TTL',
@@ -101,6 +109,17 @@ export class AuthService {
         driveStatus,
       },
     });
+
+    // Buat folder aplikasi DayDone di Drive secara best-effort bila Drive terhubung
+    if (googleProfile.driveGranted && driveStatus === DriveStatus.CONNECTED && !user.driveFolderId) {
+      try {
+        await this.storageProvider.ensureAppFolder(user.id);
+      } catch (err: unknown) {
+        this.logger.warn(
+          `Gagal membuat folder DayDone saat login untuk user ${user.id}: ${String((err as Error)?.message)}`,
+        );
+      }
+    }
 
     // Buat sesi DayDone
     const { session, refreshToken: rawSessionRefreshToken } =
