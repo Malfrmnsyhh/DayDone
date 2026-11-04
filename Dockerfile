@@ -14,8 +14,12 @@ RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
 FROM base AS builder
 WORKDIR /workspace
 
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 
 RUN pnpm install --frozen-lockfile
 
@@ -28,8 +32,12 @@ RUN pnpm --filter api run build
 FROM base AS deployer
 WORKDIR /workspace
 
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter api deploy --prod /prod/api
