@@ -27,6 +27,35 @@ describe('validateEnv', () => {
     expect(env.REFRESH_TOKEN_TTL_DAYS).toBe(30);
     expect(env.COOKIE_SAMESITE).toBe('lax');
     expect(env.COOKIE_SECURE).toBe(true);
+    expect(env.TRUST_PROXY).toBe(0);
+    expect(env.SWAGGER_ENABLED).toBe(true);
+  });
+
+  it('mengatur SWAGGER_ENABLED default false di production bila tidak diisi', () => {
+    const env = validateEnv({
+      ...validConfig,
+      NODE_ENV: 'production',
+      COOKIE_SECURE: 'true',
+    });
+    expect(env.SWAGGER_ENABLED).toBe(false);
+  });
+
+  it('mengizinkan SWAGGER_ENABLED diaktifkan secara eksplisit di production (misal staging)', () => {
+    const env = validateEnv({
+      ...validConfig,
+      NODE_ENV: 'production',
+      COOKIE_SECURE: 'true',
+      SWAGGER_ENABLED: 'true',
+    });
+    expect(env.SWAGGER_ENABLED).toBe(true);
+  });
+
+  it('mengonversi nilai TRUST_PROXY dari string ke number', () => {
+    const env = validateEnv({
+      ...validConfig,
+      TRUST_PROXY: '1',
+    });
+    expect(env.TRUST_PROXY).toBe(1);
   });
 
   it('menolak bila JWT_ACCESS_SECRET kurang dari 32 karakter', () => {

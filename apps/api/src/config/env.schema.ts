@@ -70,6 +70,14 @@ const envSchema = z
     ATTACHMENT_URL_SECRET: z
       .string()
       .min(32, 'ATTACHMENT_URL_SECRET minimal 32 karakter'),
+
+    // Pengerasan Server & Proxy (M6)
+    TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+
+    // Dokumentasi API Swagger (M6)
+    SWAGGER_ENABLED: z
+      .union([z.boolean(), z.enum(['true', 'false'])])
+      .optional(),
   })
   .refine(
     (data) => !(data.NODE_ENV === 'production' && data.COOKIE_SECURE === false),
@@ -77,7 +85,14 @@ const envSchema = z
       message: 'COOKIE_SECURE tidak boleh false di lingkungan production!',
       path: ['COOKIE_SECURE'],
     },
-  );
+  )
+  .transform((data) => ({
+    ...data,
+    SWAGGER_ENABLED:
+      data.SWAGGER_ENABLED !== undefined
+        ? data.SWAGGER_ENABLED === true || data.SWAGGER_ENABLED === 'true'
+        : data.NODE_ENV !== 'production',
+  }));
 
 export type Env = z.infer<typeof envSchema>;
 
