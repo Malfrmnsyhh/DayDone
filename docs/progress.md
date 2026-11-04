@@ -86,15 +86,19 @@
   - g. Hapus logbook berfoto -> seluruh file terkait di Google Drive berpindah ke Trash: OK
   - h. Hapus akun penguji (`DELETE /users/me`): OK
 
+- [x] M6-1 Keamanan HTTP: `helmet` (`crossOriginResourcePolicy: { policy: 'cross-origin' }`, CSP false), konfigurasi `trust proxy` via env `TRUST_PROXY` (default 0), CORS dari `CORS_ORIGINS`, `app.enableShutdownHooks()`, serta e2e test throttler yang membedakan IP via `X-Forwarded-For` saat trust proxy aktif.
+- [x] M6-2 OpenAPI / Swagger: terpasang `@nestjs/swagger`, rute interaktif di `/api/docs` dan spesifikasi JSON di `/api/docs-json`, dikontrol via `SWAGGER_ENABLED` (default true di non-prod). Seluruh endpoint didekorasi lengkap dengan skema autentikasi (Bearer JWT, Cookie `daydone_rt`), header `X-Requested-With`, multipart upload, dan kode error `ErrorCode` sesuai `docs/04-api-spec.md`.
+- [x] M6-3 Structured Logging: terpasang `nestjs-pino`, `pino-http`, dan `pino-pretty` (dev). Request ID tracing (`X-Request-Id` otomatis dibuatkan UUID bila tidak ada dan dikembalikan di header response). Redaksi data sensitif otomatis untuk header (`authorization`, `cookie`, `set-cookie`), body request (`code`, `refreshToken`, `confirm`), dan custom URL serializer untuk query parameter `token` pada URL streaming lampiran (`token=[REDACTED]`).
+- [x] M6-4 CI GitHub Actions (`.github/workflows/ci.yml`): otomatis terpicu pada push/PR ke `main`, menggunakan Node.js 24, pnpm 12.16.1, caching store, service container Postgres 17, `pnpm install --frozen-lockfile`, `prisma migrate deploy`, lint, build, unit test, e2e test, dan `pnpm audit --audit-level high`. Kerentanan transitif pada `undici` dan `tmp` diatasi dengan override root.
+- [x] M6-5 Multi-stage Dockerfile: berbasis `node:24-slim`, 4-stage (`base`, `builder`, `deployer`, `runner`), menggunakan corepack pnpm, isolasi dependensi via `pnpm deploy --prod`, container berjalan sebagai user non-root `node`, script `start:prod` (`prisma migrate deploy && node dist/main.js`), dan `.dockerignore` ketat tanpa kebocoran secret atau artifact lokal.
+- [ ] M6-6 Deploy API staging (Render / Supabase, region Singapura).
+
 ## Task berikutnya untuk agent
 
-1. Mulai **M6 (Pengerasan Backend)**:
-   - **M6-1**: `helmet`, throttler global, CORS dengan daftar origin dari env.
-   - **M6-2**: Swagger di `/api/docs` (non-produksi).
-   - **M6-3**: Logging terstruktur dengan request id, redaksi data sensitif.
-   - **M6-4**: CI GitHub Actions sesuai `docs/08-testing.md`.
-   - **M6-5**: Dockerfile API (multi-stage, `prisma generate` saat build, `migrate deploy` saat release).
-   - **M6-6**: Deploy API staging (Render/Railway, region Singapura).
+1. Mulai **Fase B M6 (Deploy API Staging di Render)**:
+   - Buat blueprint `render.yaml` (service `daydone-api`, env vars, health check path `/api/v1/health`, region Singapura `singapore`).
+   - Pandu pemilik proyek memasukkan secret produksi di dashboard Render & Supabase.
+   - Verifikasi URL staging Render: `/api/v1/health` 200 `{ status: 'ok', database: 'up' }` dan `/api/docs`.
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -104,7 +108,7 @@
 | OAuth client Web (ID + secret) dari Google Cloud | M4 | Sudah diisi pemilik di `.env` lokal |
 | Kunci rahasia JWT & Enkripsi token | M4 | Sudah diisi pemilik di `.env` lokal |
 | Akun Google penguji terdaftar sebagai test user | M4–M5 | Tersedia di Google Cloud Console |
-| Akun Render/Railway | M6 | Belum |
+| Akun Render | M6 | Diperlukan di Fase B (segera) |
 | Akun Vercel | M7 | Ada (terlihat di bookmark) |
 | Akun Expo | M8 | Belum dipastikan |
 
@@ -129,6 +133,11 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-03 — Pemrosesan PNG di `ImageProcessorService`: format PNG dipertahankan hanya bila gambar benar-benar memiliki piksel transparan (`!stats.isOpaque`). PNG opak (RGBA dengan 100% opacity) dikonversi ke JPEG mozjpeg kualitas 82 demi penghematan ukuran file dan kuota Google Drive.
 - 2026-11-03 — Verifikasi folder Google Drive sebelum unggah: memeriksa bahwa folder aplikasi ada dan tidak berstatus trashed (`files.get` fields `id,trashed`). Bila trashed atau 404, dibuat folder baru otomatis dengan pembaruan bersyarat untuk menghindari konflik konkurensi.
 - 2026-11-03 — Penyeragaman DTO `AttachmentResponse`: menghilangkan properti `createdAt` dari response `POST /logs/:id/attachments` agar bentuknya konsisten 100% dengan objek lampiran pada `GET /logs` dan `GET /logs/:id` sesuai kontrak `docs/04-api-spec.md`.
+- 2026-11-04 — Kebijakan Helmet CORP cross-origin dan CSP false: memungkinkan elemen `<img>` web frontend lintas origin memuat gambar lampiran dan Swagger UI dapat menyajikan static assets tanpa hambatan.
+- 2026-11-04 — Pengendalian Trust Proxy melalui `TRUST_PROXY`: Express hanya memercayai hop proxy terpercaya (misal 1 di Render) sehingga `req.ip` membaca client IP asli dan mencegah IP spoofing atau shared throttling lockout.
+- 2026-11-04 — Failsafe dekripsi Google refresh token: menghindari unhandled crash 500 jika encryption key berganti atau ciphertext rusak; sistem otomatis menandai `NEEDS_RECONNECT`, menghapus token rusak, dan mengembalikan 409 `DRIVE_RECONNECT_REQUIRED`.
+- 2026-11-04 — Redaksi otomatis token HMAC pada query URL logging: serializer Pino mendeteksi parameter `token` pada `/attachments/:id/content?token=...` dan menggantinya menjadi `[REDACTED]` agar secret HMAC tidak tersimpan di log server.
+- 2026-11-04 — Override pnpm untuk `undici` dan `tmp`: konfigurasi `overrides` di root `package.json` dan `pnpm-workspace.yaml` mengeliminasi 8 kerentanan keamanan tingkat high pada dependensi transitif `@nestjs/mau`.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
@@ -174,3 +183,28 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - Saat membuat folder aplikasi pertama kali atau membuat ulang folder yang terhapus/di-trash, beberapa request paralel dapat berjalan bersamaan.
     - Masalah ini diatasi menggunakan pembaruan bersyarat Prisma: `updateMany({ where: { id: userId, driveFolderId: oldFolderId }, data: { driveFolderId: newFolderId } })`.
     - Hanya request yang memenangkan balapan yang mendapat `count === 1`. Request lain yang mendapat `count === 0` langsung memindahkan folder buatannya ke Trash dan memakai folder yang sudah tersimpan di database.
+
+12. **Helmet & Header Keamanan Web Modern (`apps/api/src/main.ts`)**:
+    - Helmet memasang header HTTP standar untuk melindungi aplikasi dari kerentanan umum (seperti MIME sniffing dengan `X-Content-Type-Options: nosniff` dan clickjacking).
+    - Pengaturan `crossOriginResourcePolicy: { policy: 'cross-origin' }` krusial agar gambar yang disajikan endpoint DayDone dapat dimuat oleh tag `<img>` di browser pada origin yang berbeda (misalnya domain frontend web).
+    - `contentSecurityPolicy: false` dipilih pada tingkat REST API agar aset script & style Swagger UI tidak terblokir oleh browser.
+
+13. **Reverse Proxy Trust & Throttler Accuracy (`TRUST_PROXY`)**:
+    - Di lingkungan produksi (seperti Render atau cloud hosting lain), aplikasi berjalan di balik reverse proxy / load balancer.
+    - Tanpa setting `trust proxy`, Express membaca semua request seolah-olah berasal dari IP internal reverse proxy. Akibatnya, satu pengguna yang memicu rate limit dapat memblokir semua pengguna lainnya!
+    - Dengan menyetel `TRUST_PROXY=1`, Express membaca header `X-Forwarded-For` secara aman dari 1 hop terpercaya, sehingga Throttler membatasi request per IP pengguna asli.
+
+14. **Logging Terstruktur dengan Redaksi Data Sensitif (`src/config/logger.config.ts`)**:
+    - `nestjs-pino` menghasilkan log berformat JSON terstruktur di production/staging dan tampilan berwarna yang mudah dibaca (`pino-pretty`) di development.
+    - Setiap baris log diberi pelacak `reqId` (menggunakan header `X-Request-Id` jika ada, atau generate UUID otomatis) dan header tersebut dikirim kembali ke client untuk memudahkan troubleshooting end-to-end.
+    - Redaksi otomatis (`redact.paths` dan custom serializer) menjamin data sensitif seperti password, authorization header, token sesi cookie, payload autentikasi, serta query token URL gambar disensor menjadi `[REDACTED]`.
+
+15. **OpenAPI / Swagger Tanpa Class-Validator (`src/**/*.controller.ts`)**:
+    - DayDone menggunakan Zod untuk validasi input (bukan `class-validator`).
+    - Dokumentasi Swagger dibuat menggunakan decorator `@nestjs/swagger` di controller (`@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiBearerAuth`, `@ApiCookieAuth`) serta skema OpenAPI manual pada payload kompleks.
+    - Ini menghasilkan dokumentasi interaktif di `/api/docs` dan spesifikasi JSON di `/api/docs-json` tanpa perlu mengubah arsitektur validasi Zod.
+
+16. **Multi-stage Dockerfile dengan Isolasi `pnpm deploy` (`Dockerfile`)**:
+    - Image Docker akhir hanya berukuran minimal dan bersih dari secret atau file pengembangan (`.env*`, file test, source code TypeScript mentah).
+    - Menggunakan fitur `pnpm --filter api deploy --prod /prod/api` untuk menyalin hanya dependensi produksi (tanpa `devDependencies` seperti test runner atau linters).
+    - Menjalankan kontainer sebagai user non-root `node` untuk mematuhi prinsip least privilege dan mengurangi risiko keamanan kontainer.
