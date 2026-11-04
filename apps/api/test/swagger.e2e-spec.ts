@@ -81,6 +81,13 @@ describe('Swagger OpenAPI Documentation (e2e)', () => {
     expect(res.text).toContain('swagger-ui');
   });
 
+  it('menyertakan header X-Request-Id pada response HTTP', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/health')
+      .set('X-Request-Id', 'trace-client-id-1234');
+    expect(res.headers['x-request-id']).toBe('trace-client-id-1234');
+  });
+
   it('GET /api/docs-json mengembalikan 200 dan spesifikasi OpenAPI JSON valid', async () => {
     const res = await request(app.getHttpServer()).get('/api/docs-json');
     expect(res.status).toBe(200);

@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { createObserveModule } from '@nestjs/observe';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
 import { CryptoModule } from './common/crypto/crypto.module.js';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter.js';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard.js';
 import { validateEnv } from './config/env.schema.js';
+import { createPinoHttpConfig } from './config/logger.config.js';
 import { HealthModule } from './health/health.module.js';
 import { LogsModule } from './logs/logs.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -23,6 +25,13 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
+    }),
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        pinoHttp: createPinoHttpConfig(config),
+      }),
     }),
     ThrottlerModule.forRoot([
       {
