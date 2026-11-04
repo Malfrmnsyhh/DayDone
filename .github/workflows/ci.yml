@@ -40,15 +40,21 @@ jobs:
           node-version: 24
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Prepare test environment
         run: |
           cp apps/api/.env.test.example apps/api/.env.test
-          pnpm --filter api exec prisma migrate deploy
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
         env:
           DATABASE_URL: postgresql://daydone:daydone_test_password@localhost:5433/daydone_test
+          DIRECT_URL: postgresql://daydone:daydone_test_password@localhost:5433/daydone_test
+
+      - name: Apply database migrations
+        run: pnpm --filter api exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://daydone:daydone_test_password@localhost:5433/daydone_test
+          DIRECT_URL: postgresql://daydone:daydone_test_password@localhost:5433/daydone_test
 
       - name: Run linter
         run: pnpm lint

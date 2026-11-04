@@ -16,12 +16,13 @@ WORKDIR /workspace
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 
 RUN pnpm install --frozen-lockfile
 
 COPY apps/api ./apps/api
 
-RUN pnpm --filter api exec prisma generate
 RUN pnpm --filter api run build
 
 # Stage 3: Deployer - isolate production dependencies for API
@@ -30,6 +31,8 @@ WORKDIR /workspace
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter api deploy --prod /prod/api
