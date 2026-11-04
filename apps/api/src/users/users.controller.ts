@@ -7,6 +7,13 @@ import {
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import {
   CurrentUser,
@@ -18,6 +25,8 @@ import {
 } from './dto/delete-user.schema.js';
 import { UsersService } from './users.service.js';
 
+@ApiTags('Users')
+@ApiBearerAuth('bearer')
 @Controller('users')
 export class UsersController {
   private readonly cookieSecure: boolean;
@@ -41,6 +50,23 @@ export class UsersController {
    */
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Menghapus akun pengguna dan semua data logbook secara permanen' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['confirm'],
+      properties: {
+        confirm: {
+          type: 'string',
+          enum: ['HAPUS'],
+          description: 'Konfirmasi eksplisit penghapusan akun',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 204, description: 'Akun dan data terkait berhasil dihapus' })
+  @ApiResponse({ status: 400, description: 'Validasi konfirmasi gagal' })
+  @ApiResponse({ status: 401, description: 'Access token tidak valid atau kedaluwarsa' })
   async deleteMe(
     @CurrentUser() user: CurrentUserData,
     @Body({ schema: deleteUserSchema }) _dto: DeleteUserDto,
