@@ -179,6 +179,34 @@ describe('GoogleDriveStorage', () => {
   });
 
   describe('handleDriveError', () => {
+    it('gagal mendekripsi googleRefreshToken menandai NEEDS_RECONNECT, menghapus token rusak, dan melempar DRIVE_RECONNECT_REQUIRED (409)', async () => {
+      mockEncryptionService.decrypt.mockImplementationOnce(() => {
+        throw new Error('Unsupported state or unable to authenticate data');
+      });
+
+      try {
+        await storage.upload('user-1', {
+          name: 'test.jpg',
+          mimeType: 'image/jpeg',
+          body: Buffer.from('data'),
+        });
+        expect.unreachable();
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(DomainException);
+        const domainErr = err as DomainException;
+        expect(domainErr.getStatus()).toBe(HttpStatus.CONFLICT);
+        expect(domainErr.code).toBe(ErrorCode.DRIVE_RECONNECT_REQUIRED);
+      }
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: {
+          driveStatus: DriveStatus.NEEDS_RECONNECT,
+          googleRefreshToken: null,
+        },
+      });
+    });
+
     it('invalid_grant memetakan ke DRIVE_RECONNECT_REQUIRED dan mengupdate status user di DB', async () => {
       mockDriveFilesCreate.mockRejectedValueOnce(new Error('invalid_grant: Bad Request'));
 

@@ -61,9 +61,30 @@ export class GoogleDriveStorage implements StorageProvider {
       );
     }
 
-    const decryptedRefreshToken = this.encryptionService.decrypt(
-      user.googleRefreshToken,
-    );
+    let decryptedRefreshToken: string;
+    try {
+      decryptedRefreshToken = this.encryptionService.decrypt(
+        user.googleRefreshToken,
+      );
+    } catch {
+      this.logger.warn(
+        `Gagal mendekripsi Google refresh token milik user ${userId}, menandai NEEDS_RECONNECT`,
+      );
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          driveStatus: DriveStatus.NEEDS_RECONNECT,
+          googleRefreshToken: null,
+        },
+      });
+
+      throw new DomainException(
+        HttpStatus.CONFLICT,
+        'Akses Google Drive perlu dihubungkan ulang',
+        ErrorCode.DRIVE_RECONNECT_REQUIRED,
+      );
+    }
 
     const auth = new OAuth2Client({
       clientId: this.configService.getOrThrow<string>('GOOGLE_WEB_CLIENT_ID'),
