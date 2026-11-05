@@ -21,10 +21,10 @@ Dokumen ini adalah acuan utama bagi AI agent yang melanjutkan pengembangan DayDo
 DayDone/
 ├── apps/
 │   ├── api/        NestJS REST API (ESM, Vitest, Prisma)
-│   ├── web/        React + Vite dashboard (belum dibuat, M7)
+│   ├── web/        React + Vite dashboard (M7)
 │   └── mobile/     Expo React Native (belum dibuat, M8)
 ├── packages/
-│   └── shared/     Schema Zod + tipe bersama (belum dibuat, M7)
+│   └── shared/     Schema Zod + tipe bersama (@daydone/shared)
 ├── docs/
 ├── AGENTS.md
 ├── pnpm-workspace.yaml
@@ -33,20 +33,43 @@ DayDone/
 
 ## 4. Perintah
 
-Jalankan dari `apps/api` kecuali disebutkan lain.
+### Monorepo (dari root)
 
 | Tujuan | Perintah |
 |---|---|
-| Install semua dependency (dari root) | `pnpm install` |
-| Dev server | `pnpm start:dev` |
-| Build | `pnpm build` |
-| Unit test | `pnpm test` |
-| E2E test | `pnpm test:e2e` |
-| Lint | `pnpm lint` |
-| Format | `pnpm format` |
-| Buat migrasi baru | `pnpm exec prisma migrate dev --name <nama_snake_case>` |
-| Generate Prisma Client | `pnpm exec prisma generate` |
-| Generate file Nest | `pnpm exec nest g <module\|controller\|service> <nama> --no-spec` |
+| Install semua dependency | `pnpm install` |
+| Build seluruh paket (shared -> api & web) | `pnpm build` |
+| Unit test seluruh paket | `pnpm test` |
+| Lint seluruh paket | `pnpm lint` |
+| Format seluruh paket | `pnpm format` |
+
+### Backend (`apps/api`)
+
+| Tujuan | Perintah |
+|---|---|
+| Dev server API | `pnpm --filter api start:dev` (atau `pnpm start:dev` di `apps/api`) |
+| Build API | `pnpm --filter api build` |
+| Unit test API | `pnpm --filter api test` |
+| E2E test API | `pnpm --filter api test:e2e` |
+| Buat migrasi baru | `pnpm --filter api exec prisma migrate dev --name <nama>` |
+| Generate Prisma Client | `pnpm --filter api exec prisma generate` |
+| Generate file Nest | `pnpm --filter api exec nest g <module\|controller\|service> <nama> --no-spec` |
+
+### Web Dashboard (`apps/web`)
+
+| Tujuan | Perintah |
+|---|---|
+| Dev server Web (port 5173) | `pnpm --filter web dev` |
+| Build Web | `pnpm --filter web build` |
+| Unit test Web | `pnpm --filter web test` |
+| Lint Web | `pnpm --filter web lint` |
+
+### Paket Shared (`packages/shared`)
+
+| Tujuan | Perintah |
+|---|---|
+| Build shared | `pnpm --filter @daydone/shared build` |
+| Unit test shared | `pnpm --filter @daydone/shared test` |
 
 Sebelum menyatakan task selesai, `pnpm build`, `pnpm lint`, dan `pnpm test` harus lolos.
 

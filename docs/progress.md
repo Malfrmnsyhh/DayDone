@@ -15,7 +15,7 @@
 | M4 Autentikasi Google + sesi | Selesai |
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
-| M7 Paket shared dan web dashboard | Belum dimulai |
+| M7 Paket shared dan web dashboard | Sedang berjalan — Fase A selesai |
 | M8 Aplikasi mobile | Belum dimulai |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
@@ -96,12 +96,44 @@
 - [x] M6-5 Multi-stage Dockerfile: berbasis `node:24-slim`, 4-stage (`base`, `builder`, `deployer`, `runner`), menggunakan corepack pnpm, isolasi dependensi via `pnpm deploy --prod`, container berjalan sebagai user non-root `node`, script `start:prod` (`prisma migrate deploy && node dist/main.js`), dan `.dockerignore` ketat tanpa kebocoran secret atau artifact lokal.
 - [ ] M6-6 Deploy API staging (Render / Railway) — *ditunda ke M9 sebagai M9-0*.
 
+### M7 (Fase A — Fondasi Shared & Web)
+- [x] M7-1 Inisialisasi `packages/shared` (`@daydone/shared`):
+  - Skema Zod request dipindahkan dari `apps/api` (`log`, `auth`, `delete-user`).
+  - Tipe domain dan response (`User`, `UserProfileResponse`, `DriveStatus`, `Log`, `LogListItem`, `Attachment`, `Paginated<T>`, `ApiError`).
+  - Enum `ErrorCode` dan peta terpusat pesan bahasa Indonesia `ERROR_MESSAGES` + helper `getErrorMessage`.
+  - Konstanta domain (`MAX_ATTACHMENTS = 5`, `MAX_FILE_SIZE_BYTES = 10 MB`, `MAX_DESCRIPTION_LENGTH = 5000`, MIME type, nama cookie, durasi signed URL).
+  - Build ESM via `tsc` menghasilkan `dist/` dan deklarasi tipe `.d.ts`. Satu versi Zod untuk monorepo.
+  - `apps/api` mengimpor dari `@daydone/shared` via `workspace:*`, menghilangkan duplikasi kode.
+- [x] M7-2 Scaffold `apps/web`:
+  - Vite + React 19 + TypeScript strict + Tailwind CSS v4 + React Router v7 + TanStack Query v5 + Lucide Icons.
+  - Konfigurasi dev server port 5173 dengan `strictPort: true` (origin Google OAuth).
+  - Setup pengujian unit & komponen via Vitest + Testing Library.
+  - Template environment `.env.example` (`VITE_API_URL`, `VITE_GOOGLE_WEB_CLIENT_ID`).
+- [x] M7-3 API Client (`apps/web/src/api/`):
+  - Klien fetch terpusat dengan base URL dari env.
+  - Penyimpanan token akses **HANYA di memori** (`accessToken` dan `currentUser`), dilarang localStorage/sessionStorage.
+  - Header otomatis `Authorization: Bearer <token>` dan `credentials: 'include'`.
+  - Header proteksi CSRF `X-Requested-With: daydone-web` untuk rute autentikasi (`/auth/refresh`, `/auth/logout`).
+  - Single-flight refresh token: promise refresh bersama di tingkat modul. Menangani multiple concurrent 401s dan bootstrap ganda (misal React StrictMode) hanya dengan 1 panggilan ke server.
+  - Penanganan error terstruktur via subclass `ApiError` dengan pemetaan pesan ramah bahasa Indonesia.
+- [x] M7-4 Autentikasi Web & Routing:
+  - Bootstrap otomatis saat aplikasi dibuka: memanggil `/auth/refresh` lalu `/auth/me` untuk memulihkan sesi dari cookie HttpOnly, disertai layar loading (`LoadingScreen`).
+  - Halaman login (`/login`): tombol "Masuk dengan Google" memanfaatkan Google Identity Services (GIS popup `initCodeClient`) dengan scope `openid email profile drive.file`, platform `WEB`, redirectUri `postmessage`.
+  - Protected routes (`ProtectedRoute`) dan public-only routes (`PublicRoute`).
+  - Aksi logout (`POST /auth/logout`) yang membersihkan sesi di memori dan mengarahkan kembali ke `/login`.
+- [x] M7-5 Pembaruan Build & Dockerfile:
+  - Dockerfile multi-stage diperbarui untuk menyertakan `packages/shared` dan mem-build-nya sebelum `apps/api`.
+  - `pnpm build`, `pnpm lint`, dan `pnpm test` lolos 100% di seluruh paket monorepo.
+
 ## Task berikutnya untuk agent
 
-1. Mulai **Milestone M7 (Paket shared dan web dashboard)**:
-   - Task M7-1: Inisialisasi `packages/shared` (`@daydone/shared`) untuk schema Zod request, tipe response, dan konstanta bersama (build ESM).
-   - Task M7-2: Scaffold `apps/web` (Vite + React + TypeScript + React Router + TanStack Query + Tailwind CSS).
-   - *Catatan:* Pengembangan M7 (web) dan M8 (mobile) berjalan secara lokal menggunakan API lokal (`http://localhost:3000`).
+1. Tunggu konfirmasi pengujian manual dari pemilik untuk Fase A (login, reload tetap login, dua tab, logout).
+2. Lanjutkan ke **Milestone M7 Fase B — Logbook**:
+   - Layout dashboard responsif (nyaman di HP, header avatar dan nama).
+   - Daftar logbook (US-05): urutan terbaru, filter rentang tanggal, pencarian debounce, paginasi, thumbnail, state kosong.
+   - Kartu "Hari ini" (GET `/logs/by-date/:date`).
+   - Form buat/ubah logbook (US-04, US-07) dengan Zod resolver dan penanganan `LOG_DATE_CONFLICT`.
+   - Detail logbook (US-06) dan dialog konfirmasi hapus (US-08).
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -143,6 +175,9 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-04 — Override pnpm untuk `undici` dan `tmp`: konfigurasi `overrides` di root `package.json` dan `pnpm-workspace.yaml` mengeliminasi 8 kerentanan keamanan tingkat high pada dependensi transitif `@nestjs/mau`.
 - 2026-11-05 — Deploy staging API ditunda ke M9 — kendala kartu kredit (Render) dan healthcheck gagal (Railway); pengembangan web (M7) dan mobile (M8) memakai API lokal (`http://localhost:3000`).
 - 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9.
+- 2026-11-05 — Akses token web hanya di memori — `localStorage` dan `sessionStorage` tidak dipakai demi memitigasi risiko pencurian token melalui celah XSS.
+- 2026-11-05 — Single-flight refresh di API client web — promise refresh bersama di tingkat modul mencegah race condition dan kegagalan rotasi refresh token akibat request paralel atau React StrictMode.
+- 2026-11-05 — Pemakaian Google Identity Services (GIS) `initCodeClient` langsung tanpa library wrapper — menghindari konflik peer-dependency React 19 dan menjaga integrasi popup tetap transparan serta konsisten dengan uji M4.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
@@ -213,3 +248,13 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - Image Docker akhir hanya berukuran minimal dan bersih dari secret atau file pengembangan (`.env*`, file test, source code TypeScript mentah).
     - Menggunakan fitur `pnpm --filter api deploy --prod /prod/api` untuk menyalin hanya dependensi produksi (tanpa `devDependencies` seperti test runner atau linters).
     - Menjalankan kontainer sebagai user non-root `node` untuk mematuhi prinsip least privilege dan mengurangi risiko keamanan kontainer.
+
+17. **Single-Flight Promise untuk Token Refresh di Frontend (`apps/web/src/api/client.ts`)**:
+    - Saat browser mengirim beberapa request API bersamaan dan access token telah habis, seluruh request akan menerima status `401 Unauthorized` serentak.
+    - Jika masing-masing request memanggil `/auth/refresh` sendiri-sendiri, refresh token pertama akan merotasi cookie sesi, sedangkan request kedua akan mengirim token yang baru saja hangus sehingga memicu *reuse detection* (yang mencabut seluruh sesi pengguna di server!).
+    - Pola *single-flight*: kita menyimpan variabel `refreshPromise` bersama di tingkat modul API client. Request pertama membuat promise refresh; request ke-2, ke-3, dst hanya ikut menunggu promise yang sama (`await refreshPromise`). Setelah selesai, promise di-reset ke `null` dan seluruh request diulang dengan token baru yang diperoleh.
+
+18. **Penyimpanan Token Akses di Memori vs LocalStorage (`apps/web/src/api/client.ts`)**:
+    - `localStorage` dan `sessionStorage` rentan dibaca oleh script apa pun yang dieksekusi di browser (misalnya celah XSS atau library pihak ketiga yang disusupi).
+    - Dengan menyimpan access token hanya di variabel JavaScript (RAM browser), token tidak dapat diekstrak via storage inspector dan otomatis bersih saat tab browser ditutup.
+    - Pemulihan sesi antar reload/buka tab baru dilakukan secara aman melalui cookie `daydone_rt` bertipe `HttpOnly`, `Path=/api/v1/auth`, dan `SameSite=Lax`. JavaScript tidak memiliki akses ke cookie ini, dan browser menyertakannya secara otomatis hanya saat memanggil rute autentikasi.

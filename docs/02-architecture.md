@@ -95,6 +95,51 @@ flowchart TD
 
 Aturan: `Logs` tidak tahu soal Drive secara langsung; `Logs` mengimpor `Attachments` untuk menghasilkan URL lampiran dan memicu penghapusan file di storage saat logbook dihapus. `AttachmentsService` memverifikasi kepemilikan logbook langsung lewat `PrismaService` (`logEntry.userId`). `Storage` mengimplementasikan abstraksi `StorageProvider`. `Users` memakai `Storage` saat mencabut akses atau inisialisasi.
 
+### Struktur packages/shared (`@daydone/shared`)
+
+Paket bersama tanpa ketergantungan framework. Berisi kontrak data tunggal yang dipakai bersama oleh `apps/api`, `apps/web`, dan kelak `apps/mobile`:
+
+```
+packages/shared/src/
+├── index.ts                titik ekspor utama
+├── constants.ts            konstanta domain (MAX_ATTACHMENTS, MAX_FILE_SIZE_BYTES, dll)
+├── errors.ts               enum ErrorCode dan pemetaan pesan Indonesia (ERROR_MESSAGES)
+├── schemas/                skema Zod untuk validasi request DTO
+│   ├── log.schema.ts       create, update, list query, by-date
+│   ├── auth.schema.ts      google login, refresh, logout
+│   └── delete-user.schema.ts konfirmasi hapus akun
+└── types/                  antarmuka TypeScript entitas & response API
+    ├── api.types.ts        ApiError, PaginationMeta, Paginated<T>
+    ├── auth.types.ts       AuthResponse, RefreshResponse, UserProfileResponse
+    ├── log.types.ts        Log, LogListItem
+    ├── attachment.types.ts Attachment
+    └── user.types.ts       User, DriveStatus
+```
+
+### Struktur apps/web (Web Dashboard)
+
+Aplikasi Single Page Application (SPA) berbasis Vite + React 19 + Tailwind CSS:
+
+```
+apps/web/src/
+├── main.tsx                entry point React, mount root
+├── App.tsx                 routing React Router (public vs protected routes)
+├── index.css               Tailwind CSS
+├── api/                    klien API terpusat
+│   ├── client.ts           fetch wrapper, in-memory token, single-flight refresh, CSRF
+│   └── api-error.ts        subclass Error dengan kode domain dan translasi pesan
+├── auth/                   state manajemen autentikasi & GIS popup
+│   ├── auth-context.tsx    AuthProvider, useAuth, session recovery dari cookie
+│   └── google-login-button.tsx tombol GIS initCodeClient (auth-code popup)
+├── components/             komponen UI dan guards
+│   ├── loading-screen.tsx  indikator loading saat bootstrap sesi
+│   ├── protected-route.tsx guard rute yang membutuhkan login
+│   └── public-route.tsx    guard rute publik (mengalihkan ke dashboard bila sudah login)
+└── pages/                  halaman aplikasi
+    ├── login-page.tsx      layar masuk Google
+    └── dashboard-page.tsx  dashboard utama (placeholder M7-A)
+```
+
 ## 4. Abstraksi penyimpanan
 
 ```ts
