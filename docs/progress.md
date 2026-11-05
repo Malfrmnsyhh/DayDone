@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M6 - Fase A)
+**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M7 - Fase A)
 
 ## Status per milestone
 
@@ -143,7 +143,7 @@
 | OAuth client Web (ID + secret) dari Google Cloud | M4 | Sudah diisi pemilik di `.env` lokal |
 | Kunci rahasia JWT & Enkripsi token | M4 | Sudah diisi pemilik di `.env` lokal |
 | Akun Google penguji terdaftar sebagai test user | M4–M5 | Tersedia di Google Cloud Console |
-| Akun Render | M6 | Diperlukan di Fase B (segera) |
+| Akun Render | M6 | Ditunda ke M9 |
 | Akun Vercel | M7 | Ada (terlihat di bookmark) |
 | Akun Expo | M8 | Belum dipastikan |
 
