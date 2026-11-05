@@ -153,11 +153,15 @@
   - Deskripsi disajikan sebagai teks murni (`whitespace-pre-wrap`), dilarang `dangerouslySetInnerHTML`.
   - Halaman 404 ramah pengguna (`NotFoundState`) saat logbook tidak ditemukan.
   - Dialog konfirmasi hapus modal (`ConfirmModal`) sebelum mutasi `DELETE /logs/:id`.
+- [x] M7-Fase B Verifikasi Manual (Dikonfirmasi oleh pemilik):
+  - Buat logbook baru & sinkronisasi navigasi: OK
+  - Detail logbook menampilkan tanggal dan deskripsi: OK
+  - Ubah logbook & Hapus logbook: OK
+  - Penyelarasan kontrak response logbook tunggal (objek `Log` langsung tanpa wrapper `data`): OK
 
 ## Task berikutnya untuk agent
 
-1. Tunggu konfirmasi pengujian manual dari pemilik untuk Fase B.
-2. Lanjutkan ke **Milestone M7 Fase C — Foto, Google Drive & Pengaturan Akun**:
+1. Tunggu persetujuan/instruksi dari pemilik untuk memulai **Milestone M7 Fase C — Foto, Google Drive & Pengaturan Akun**:
    - Transaksi penguncian baris logbook `SELECT ... FOR UPDATE` di backend `AttachmentsService` untuk mencegah race condition kuota 5 foto.
    - Unggah foto (US-09): drag-and-drop / file picker, validasi klien (ukuran, kuota, MIME), unggah satu per satu dengan XMLHttpRequest progress bar.
    - Galeri foto penuh + lightbox, hapus foto (US-10).
@@ -212,6 +216,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-05 — Parameter filter logbook disimpan di URL search params (`useSearchParams`) — memastikan tombol browser Back mengembalikan state daftar yang sama persis dan memudahkan pembagian link.
 - 2026-11-05 — Tanggal logbook dapat diubah pada mode edit — mematuhi US-07 dan kemampuan endpoint PATCH /logs/:id, dengan penanganan konflik 409 yang identik dengan mode buat.
 - 2026-11-05 — Custom Zod resolver untuk react-hook-form — mengatasi ketidakcocokan format error internal antara Zod v4 (issues) dan @hookform/resolvers/zod v3 (errors).
+- 2026-11-05 — Penyelarasan kontrak API entitas Log tunggal di web client — endpoint log tunggal (GET /logs/:id, GET /logs/by-date/:date, POST /logs, PATCH /logs/:id) mengembalikan objek Log langsung tanpa pembungkus { data: Log }, berbeda dari paginated list (GET /logs) yang memiliki wrapper { data, meta }.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
