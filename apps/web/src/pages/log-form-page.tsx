@@ -23,7 +23,7 @@ export function LogFormPage() {
 
   // Detail query untuk mode edit
   const {
-    data: detailData,
+    data: detailLog,
     isLoading: isDetailLoading,
     isError: isDetailError,
   } = useLogDetail(id);
@@ -49,13 +49,13 @@ export function LogFormPage() {
 
   // Isi data form saat mode edit selesai memuat detail logbook
   useEffect(() => {
-    if (isEdit && detailData?.data) {
+    if (isEdit && detailLog) {
       reset({
-        date: detailData.data.date,
-        description: detailData.data.description,
+        date: detailLog.date,
+        description: detailLog.description,
       });
     }
-  }, [isEdit, detailData, reset]);
+  }, [isEdit, detailLog, reset]);
 
   // Cegah navigasi jika ada perubahan belum tersimpan (React Router Blocker)
   const blocker = useBlocker(
@@ -81,7 +81,7 @@ export function LogFormPage() {
     return <DetailSkeleton />;
   }
 
-  if (isEdit && (isDetailError || !detailData?.data)) {
+  if (isEdit && (isDetailError || !detailLog)) {
     return <NotFoundState />;
   }
 
@@ -98,14 +98,14 @@ export function LogFormPage() {
           description: values.description,
         });
         setIsSubmittingSuccess(true);
-        navigate(`/logs/${res.data.id}`);
+        navigate(`/logs/${res.id}`);
       } else {
         const res = await createMutation.mutateAsync({
           date: values.date,
           description: values.description,
         });
         setIsSubmittingSuccess(true);
-        navigate(`/logs/${res.data.id}`);
+        navigate(`/logs/${res.id}`);
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {

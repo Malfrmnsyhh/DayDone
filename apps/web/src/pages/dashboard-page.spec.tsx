@@ -15,13 +15,13 @@ describe('DashboardPage Component', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            data: {
-              id: 'log-today',
-              date: '2026-11-05',
-              description: 'Mengerjakan fitur auth web',
-              attachmentCount: 0,
-              attachments: [],
-            },
+            id: 'log-today',
+            date: '2026-11-05',
+            description: 'Mengerjakan fitur auth web',
+            attachmentCount: 0,
+            attachments: [],
+            createdAt: '2026-11-05T00:00:00.000Z',
+            updatedAt: '2026-11-05T00:00:00.000Z',
           }),
         };
       }

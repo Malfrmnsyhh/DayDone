@@ -15,13 +15,13 @@ describe('LogDetailPage Component', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            data: {
-              id: 'log-test-1',
-              date: '2026-11-05',
-              description: 'Deskripsi baris pertama\nDeskripsi baris kedua',
-              attachmentCount: 0,
-              attachments: [],
-            },
+            id: 'log-test-1',
+            date: '2026-11-05',
+            description: 'Deskripsi baris pertama\nDeskripsi baris kedua',
+            attachmentCount: 0,
+            attachments: [],
+            createdAt: '2026-11-05T00:00:00.000Z',
+            updatedAt: '2026-11-05T00:00:00.000Z',
           }),
         };
       }
@@ -91,13 +91,13 @@ describe('LogDetailPage Component', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          data: {
-            id: 'log-delete-target',
-            date: '2026-11-05',
-            description: 'Logbook yang akan dihapus',
-            attachmentCount: 0,
-            attachments: [],
-          },
+          id: 'log-delete-target',
+          date: '2026-11-05',
+          description: 'Logbook yang akan dihapus',
+          attachmentCount: 0,
+          attachments: [],
+          createdAt: '2026-11-05T00:00:00.000Z',
+          updatedAt: '2026-11-05T00:00:00.000Z',
         }),
       };
     });

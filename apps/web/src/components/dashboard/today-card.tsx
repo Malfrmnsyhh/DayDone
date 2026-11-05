@@ -9,13 +9,11 @@ import { CardSkeleton } from '../common/loading-skeleton.js';
 
 export function TodayCard() {
   const today = getTodayLocalDateString();
-  const { data, isLoading } = useLogByDate(today);
+  const { data: todayLog, isLoading } = useLogByDate(today);
 
   if (isLoading) {
     return <CardSkeleton />;
   }
-
-  const todayLog = data?.data;
 
   // Bila logbook hari ini sudah dibuat
   if (todayLog) {

@@ -18,6 +18,7 @@ export interface LogsListParams {
 
 /**
  * Hook untuk mengambil daftar logbook dengan filter & paginasi.
+ * Response: Paginated<LogListItem> = { data: LogListItem[], meta: PaginationMeta }
  */
 export function useLogsList(params: LogsListParams = {}) {
   const queryParams = new URLSearchParams();
@@ -38,22 +39,24 @@ export function useLogsList(params: LogsListParams = {}) {
 
 /**
  * Hook untuk mengambil logbook berdasarkan tanggal spesifik (misal hari ini).
+ * Response: Objek Log langsung (bukan { data: Log })
  */
 export function useLogByDate(date: string) {
-  return useQuery<{ data: Log }>({
+  return useQuery<Log>({
     queryKey: ['logs', 'by-date', date],
-    queryFn: () => apiFetch<{ data: Log }>(`/logs/by-date/${date}`),
+    queryFn: () => apiFetch<Log>(`/logs/by-date/${date}`),
     retry: false, // 404 adalah kondisi wajar saat logbook tanggal tersebut belum dibuat
   });
 }
 
 /**
  * Hook untuk mengambil detail 1 logbook beserta lampirannya.
+ * Response: Objek Log langsung (bukan { data: Log })
  */
 export function useLogDetail(id?: string) {
-  return useQuery<{ data: Log }>({
+  return useQuery<Log>({
     queryKey: ['logs', 'detail', id],
-    queryFn: () => apiFetch<{ data: Log }>(`/logs/${id}`),
+    queryFn: () => apiFetch<Log>(`/logs/${id}`),
     enabled: Boolean(id),
     retry: (failureCount, error: any) => {
       // Jangan retry jika 404 Not Found
@@ -65,13 +68,14 @@ export function useLogDetail(id?: string) {
 
 /**
  * Mutation hook untuk membuat logbook baru.
+ * Response: Objek Log langsung
  */
 export function useCreateLog() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ data: Log }, Error, CreateLogDto>({
+  return useMutation<Log, Error, CreateLogDto>({
     mutationFn: (dto) =>
-      apiFetch<{ data: Log }>('/logs', {
+      apiFetch<Log>('/logs', {
         method: 'POST',
         body: JSON.stringify(dto),
       }),
@@ -83,13 +87,14 @@ export function useCreateLog() {
 
 /**
  * Mutation hook untuk memperbarui tanggal dan/atau deskripsi logbook.
+ * Response: Objek Log langsung
  */
 export function useUpdateLog(id: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<{ data: Log }, Error, UpdateLogDto>({
+  return useMutation<Log, Error, UpdateLogDto>({
     mutationFn: (dto) =>
-      apiFetch<{ data: Log }>(`/logs/${id}`, {
+      apiFetch<Log>(`/logs/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dto),
       }),
@@ -115,4 +120,3 @@ export function useDeleteLog() {
     },
   });
 }
-

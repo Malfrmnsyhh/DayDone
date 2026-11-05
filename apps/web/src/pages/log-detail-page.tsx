@@ -21,7 +21,7 @@ export function LogDetailPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
-  const { data, isLoading, isError, error, refetch } = useLogDetail(id);
+  const { data: log, isLoading, isError, error, refetch } = useLogDetail(id);
   const deleteMutation = useDeleteLog();
 
   if (isLoading) {
@@ -31,10 +31,9 @@ export function LogDetailPage() {
   // Cek apakah error merupakan 404 Not Found
   const is404 =
     (error as any)?.statusCode === 404 ||
-    (error as any)?.status === 404 ||
-    !data?.data;
+    (error as any)?.status === 404;
 
-  if (isError || !data?.data) {
+  if (isError || !log) {
     if (is404) {
       return (
         <NotFoundState
@@ -52,8 +51,6 @@ export function LogDetailPage() {
       />
     );
   }
-
-  const log = data.data;
 
   const handleDelete = async () => {
     if (!id) return;

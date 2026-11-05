@@ -28,11 +28,13 @@ describe('LogFormPage Component', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            data: {
-              id: 'log-123',
-              date: '2026-11-04',
-              description: 'Deskripsi yang akan diedit',
-            },
+            id: 'log-123',
+            date: '2026-11-04',
+            description: 'Deskripsi yang akan diedit',
+            attachments: [],
+            attachmentCount: 0,
+            createdAt: '2026-11-04T00:00:00.000Z',
+            updatedAt: '2026-11-04T00:00:00.000Z',
           }),
         };
       }
@@ -135,11 +137,13 @@ describe('LogFormPage Component', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          data: {
-            id: 'log-current-id',
-            date: '2026-11-03',
-            description: 'Logbook yang sedang diubah',
-          },
+          id: 'log-current-id',
+          date: '2026-11-03',
+          description: 'Logbook yang sedang diubah',
+          attachments: [],
+          attachmentCount: 0,
+          createdAt: '2026-11-03T00:00:00.000Z',
+          updatedAt: '2026-11-03T00:00:00.000Z',
         }),
       };
     });
