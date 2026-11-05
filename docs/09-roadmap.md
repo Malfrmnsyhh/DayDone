@@ -84,7 +84,8 @@ Butuh: Google Cloud project dan OAuth client (lihat `docs/05-auth-and-storage.md
 | M6-3 | Logging terstruktur dengan request id, redaksi data sensitif | Token tidak pernah muncul di log |
 | M6-4 | CI GitHub Actions sesuai `docs/08-testing.md` | Pipeline hijau |
 | M6-5 | Dockerfile API (multi-stage, `prisma generate` saat build, `migrate deploy` saat release) | Image berjalan lokal |
-| M6-6 | Deploy API staging (Render/Railway, region Singapura) | `/health` hijau di URL publik |
+
+*Catatan:* Deployment API staging (sebelumnya M6-6) dipindahkan ke M9 sebagai task **M9-0**. Pengembangan M7 (web) dan M8 (mobile) menggunakan API lokal.
 
 ## M7 — Paket shared dan web dashboard
 
@@ -104,7 +105,7 @@ Butuh: Google Cloud project dan OAuth client (lihat `docs/05-auth-and-storage.md
 
 ## M8 — Aplikasi mobile
 
-Sebelum mulai: putuskan Q1 di PRD (React Native/Expo atau Flutter). Task di bawah untuk Expo.
+Sebelum mulai: putuskan Q1 di PRD (React Native/Expo atau Flutter). Task di bawah untuk Expo. Pengujian mobile memakai API lokal (misal via IP jaringan lokal `http://<ip-laptop>:3000` atau reverse proxy tunnel) karena deployment staging API ditunda ke M9.
 
 | ID | Task | Acceptance criteria |
 |---|---|---|
@@ -120,6 +121,7 @@ Sebelum mulai: putuskan Q1 di PRD (React Native/Expo atau Flutter). Task di bawa
 
 | ID | Task | Acceptance criteria |
 |---|---|---|
+| M9-0 | Deploy API staging / produksi (Render/Railway, region Singapura) | `/health` hijau di URL publik |
 | M9-1 | Domain kustom (opsional tapi disarankan) untuk web dan API | Cookie refresh `SameSite=Lax` berfungsi |
 | M9-2 | Halaman beranda + kebijakan privasi | Bisa diakses publik |
 | M9-3 | Publikasikan aplikasi di Google Cloud consent screen | Pengguna di luar daftar test user bisa login |

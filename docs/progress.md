@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 3 November 2026 (penyelesaian Milestone M5)
+**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M6 - Fase A)
 
 ## Status per milestone
 
@@ -14,7 +14,10 @@
 | M3 Logbook di database | Selesai |
 | M4 Autentikasi Google + sesi | Selesai |
 | M5 Google Drive dan lampiran | Selesai |
-| M6 – M9 | Belum dimulai |
+| M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
+| M7 Paket shared dan web dashboard | Belum dimulai |
+| M8 Aplikasi mobile | Belum dimulai |
+| M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
 
@@ -91,14 +94,14 @@
 - [x] M6-3 Structured Logging: terpasang `nestjs-pino`, `pino-http`, dan `pino-pretty` (dev). Request ID tracing (`X-Request-Id` otomatis dibuatkan UUID bila tidak ada dan dikembalikan di header response). Redaksi data sensitif otomatis untuk header (`authorization`, `cookie`, `set-cookie`), body request (`code`, `refreshToken`, `confirm`), dan custom URL serializer untuk query parameter `token` pada URL streaming lampiran (`token=[REDACTED]`).
 - [x] M6-4 CI GitHub Actions (`.github/workflows/ci.yml`): otomatis terpicu pada push/PR ke `main`, menggunakan Node.js 24, pnpm 12.16.1, caching store, service container Postgres 17, `pnpm install --frozen-lockfile`, `prisma migrate deploy`, lint, build, unit test, e2e test, dan `pnpm audit --audit-level high`. Kerentanan transitif pada `undici` dan `tmp` diatasi dengan override root.
 - [x] M6-5 Multi-stage Dockerfile: berbasis `node:24-slim`, 4-stage (`base`, `builder`, `deployer`, `runner`), menggunakan corepack pnpm, isolasi dependensi via `pnpm deploy --prod`, container berjalan sebagai user non-root `node`, script `start:prod` (`prisma migrate deploy && node dist/main.js`), dan `.dockerignore` ketat tanpa kebocoran secret atau artifact lokal.
-- [ ] M6-6 Deploy API staging (Render / Supabase, region Singapura).
+- [ ] M6-6 Deploy API staging (Render / Railway) — *ditunda ke M9 sebagai M9-0*.
 
 ## Task berikutnya untuk agent
 
-1. Mulai **Fase B M6 (Deploy API Staging di Render)**:
-   - Buat blueprint `render.yaml` (service `daydone-api`, env vars, health check path `/api/v1/health`, region Singapura `singapore`).
-   - Pandu pemilik proyek memasukkan secret produksi di dashboard Render & Supabase.
-   - Verifikasi URL staging Render: `/api/v1/health` 200 `{ status: 'ok', database: 'up' }` dan `/api/docs`.
+1. Mulai **Milestone M7 (Paket shared dan web dashboard)**:
+   - Task M7-1: Inisialisasi `packages/shared` (`@daydone/shared`) untuk schema Zod request, tipe response, dan konstanta bersama (build ESM).
+   - Task M7-2: Scaffold `apps/web` (Vite + React + TypeScript + React Router + TanStack Query + Tailwind CSS).
+   - *Catatan:* Pengembangan M7 (web) dan M8 (mobile) berjalan secara lokal menggunakan API lokal (`http://localhost:3000`).
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -138,6 +141,8 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-04 — Failsafe dekripsi Google refresh token: menghindari unhandled crash 500 jika encryption key berganti atau ciphertext rusak; sistem otomatis menandai `NEEDS_RECONNECT`, menghapus token rusak, dan mengembalikan 409 `DRIVE_RECONNECT_REQUIRED`.
 - 2026-11-04 — Redaksi otomatis token HMAC pada query URL logging: serializer Pino mendeteksi parameter `token` pada `/attachments/:id/content?token=...` dan menggantinya menjadi `[REDACTED]` agar secret HMAC tidak tersimpan di log server.
 - 2026-11-04 — Override pnpm untuk `undici` dan `tmp`: konfigurasi `overrides` di root `package.json` dan `pnpm-workspace.yaml` mengeliminasi 8 kerentanan keamanan tingkat high pada dependensi transitif `@nestjs/mau`.
+- 2026-11-05 — Deploy staging API ditunda ke M9 — kendala kartu kredit (Render) dan healthcheck gagal (Railway); pengembangan web (M7) dan mobile (M8) memakai API lokal (`http://localhost:3000`).
+- 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
