@@ -42,10 +42,12 @@ describe('SignedUrlService', () => {
   it('menolak token yang dimodifikasi (tampered signature)', () => {
     const result = service.generateUrl('att-uuid-1', 'user-uuid-1');
     const token = new URL(result.url).searchParams.get('token')!;
+    const [payloadPart, sigPart] = token.split('.');
 
-    // Ubah 1 karakter terakhir token
-    const tamperedToken =
-      token.slice(0, -1) + (token.endsWith('a') ? 'b' : 'a');
+    // Ubah karakter pertama signature (menghindari bit padding di karakter terakhir base64url)
+    const tamperedSig =
+      (sigPart.startsWith('a') ? 'b' : 'a') + sigPart.slice(1);
+    const tamperedToken = `${payloadPart}.${tamperedSig}`;
 
     const verified = service.verifyToken(tamperedToken);
     expect(verified).toBeNull();
