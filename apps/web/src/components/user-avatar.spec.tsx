@@ -51,3 +51,4 @@ describe('UserAvatar Component', () => {
     expect(screen.getByText('AD')).toBeInTheDocument();
   });
 });
+
