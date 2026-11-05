@@ -1,111 +1,111 @@
-import { CheckCircle, Cloud, LogOut } from 'lucide-react';
-import { useAuth } from '../auth/auth-context.js';
-import { UserAvatar } from '../components/user-avatar.js';
+import { Plus } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useLogsList } from '../api/logs.js';
+import { ErrorState } from '../components/common/error-state.js';
+import { ListSkeleton } from '../components/common/loading-skeleton.js';
+import { EmptyState } from '../components/dashboard/empty-state.js';
+import { LogCard } from '../components/dashboard/log-card.js';
+import { LogFilterBar } from '../components/dashboard/log-filter-bar.js';
+import { Pagination } from '../components/dashboard/pagination.js';
+import { TodayCard } from '../components/dashboard/today-card.js';
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const getDriveBadge = (status?: string) => {
-    switch (status) {
-      case 'CONNECTED':
-        return (
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-            Drive Terhubung
-          </span>
-        );
-      case 'NEEDS_RECONNECT':
-        return (
-          <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
-            Perlu Hubungkan Ulang
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
-            Belum Terhubung
-          </span>
-        );
-    }
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const search = searchParams.get('search') || undefined;
+  const from = searchParams.get('from') || undefined;
+  const to = searchParams.get('to') || undefined;
+
+  const { data, isLoading, isError, refetch } = useLogsList({
+    page,
+    limit: 10,
+    search,
+    from,
+    to,
+  });
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('page', String(newPage));
+      return next;
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleResetFilter = () => {
+    setSearchParams(new URLSearchParams({ page: '1' }));
+  };
+
+  const hasFilters = Boolean(search || from || to);
+  const logs = data?.data || [];
+  const meta = data?.meta;
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header bar */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white shadow-xs">
-              DD
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              DayDone
-            </span>
-          </div>
+    <div className="space-y-6">
+      {/* Kartu Hari Ini */}
+      <TodayCard />
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <UserAvatar
-                name={user?.name}
-                avatarUrl={user?.avatarUrl}
-                sizeClassName="h-8 w-8 text-xs"
-              />
-              <div className="hidden text-left sm:block">
-                <p className="text-xs font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-[11px] text-slate-500">{user?.email}</p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="flex items-center space-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-red-600 transition"
-              title="Keluar dari akun"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Keluar</span>
-            </button>
-          </div>
+      {/* Header Daftar Logbook */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            Daftar Logbook
+          </h1>
+          <p className="text-xs text-slate-500">
+            Riwayat seluruh catatan aktivitas dan tugas magang Anda.
+          </p>
         </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Selamat Datang, {user?.name}! 👋
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Email terdaftar: <strong>{user?.email}</strong>
-              </p>
-            </div>
-            <div>{getDriveBadge(user?.driveStatus)}</div>
+        <Link
+          to="/logs/new"
+          className="inline-flex items-center justify-center gap-1.5 self-start sm:self-auto rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Tulis Logbook</span>
+        </Link>
+      </div>
+
+      {/* Filter & Pencarian */}
+      <LogFilterBar />
+
+      {/* Area Konten Daftar */}
+      {isLoading && <ListSkeleton count={4} />}
+
+      {isError && (
+        <ErrorState
+          title="Gagal Memuat Logbook"
+          message="Tidak dapat mengambil daftar logbook dari server. Pastikan API backend aktif."
+          onRetry={() => refetch()}
+        />
+      )}
+
+      {!isLoading && !isError && logs.length === 0 && (
+        <EmptyState
+          isFiltered={hasFilters}
+          onResetFilter={handleResetFilter}
+        />
+      )}
+
+      {!isLoading && !isError && logs.length > 0 && (
+        <div className="space-y-3">
+          <div className="space-y-3">
+            {logs.map((log) => (
+              <LogCard key={log.id} log={log} />
+            ))}
           </div>
 
-          <hr className="my-6 border-slate-100" />
-
-          {/* Success card for Phase A */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-emerald-900">
-            <div className="flex items-start space-x-3">
-              <CheckCircle className="h-6 w-6 shrink-0 text-emerald-600 mt-0.5" />
-              <div className="space-y-1">
-                <h2 className="text-sm font-bold">
-                  Fase A Selesai — Fondasi Web & Autentikasi Berhasil!
-                </h2>
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  Paket <code>@daydone/shared</code>, API client dengan token in-memory, proteksi CSRF, single-flight refresh token, dan route guard telah beroperasi normal.
-                </p>
-                <div className="mt-3 flex items-center space-x-2 text-xs text-emerald-700 font-medium">
-                  <Cloud className="h-4 w-4" />
-                  <span>Siap dilanjutkan ke <strong>Fase B: Fitur Logbook</strong> (Daftar, Filter, Form Buat/Ubah, Detail).</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {meta && (
+            <Pagination
+              currentPage={meta.page}
+              totalPages={meta.totalPages}
+              totalItems={meta.total}
+              onPageChange={handlePageChange}
+            />
+          )}
         </div>
-      </main>
+      )}
     </div>
   );
 }
-
