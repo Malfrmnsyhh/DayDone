@@ -49,7 +49,9 @@ describe('EncryptionService', () => {
   it('menolak dekripsi bila auth tag dimanipulasi', () => {
     const encrypted = service.encrypt('sensitive-data');
     const parts = encrypted.split('.');
-    const tamperedTag = `A${parts[2]?.slice(1)}`;
+    const originalTag = parts[2]!;
+    const tamperedTag =
+      (originalTag.startsWith('a') ? 'b' : 'a') + originalTag.slice(1);
     const tampered = `${parts[0]}.${parts[1]}.${tamperedTag}.${parts[3]}`;
 
     expect(() => service.decrypt(tampered)).toThrow();

@@ -15,14 +15,11 @@ FROM base AS builder
 WORKDIR /workspace
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/api/prisma ./apps/api/prisma
-COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
-
-RUN pnpm install --frozen-lockfile
-
+COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @daydone/shared run build
 RUN pnpm --filter api run build
 
 # Stage 3: Deployer - isolate production dependencies for API
@@ -30,11 +27,11 @@ FROM base AS deployer
 WORKDIR /workspace
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/api/prisma ./apps/api/prisma
-COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @daydone/shared run build
 RUN pnpm --filter api deploy --prod /prod/api
 
 # Stage 4: Production Runner
