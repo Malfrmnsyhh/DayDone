@@ -178,6 +178,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-05 — Akses token web hanya di memori — `localStorage` dan `sessionStorage` tidak dipakai demi memitigasi risiko pencurian token melalui celah XSS.
 - 2026-11-05 — Single-flight refresh di API client web — promise refresh bersama di tingkat modul mencegah race condition dan kegagalan rotasi refresh token akibat request paralel atau React StrictMode.
 - 2026-11-05 — Pemakaian Google Identity Services (GIS) `initCodeClient` langsung tanpa library wrapper — menghindari konflik peer-dependency React 19 dan menjaga integrasi popup tetap transparan serta konsisten dengan uji M4.
+- 2026-11-05 — Serialisasi refresh token lintas tab dengan Web Locks API — membungkus pemanggilan `/auth/refresh` dengan `navigator.locks.request('daydone-refresh', ...)` agar refresh dari beberapa tab berjalan bergantian; tab yang menunggu secara otomatis menggunakan cookie hasil rotasi tab sebelumnya, dengan fallback graceful bila API tidak didukung browser.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 

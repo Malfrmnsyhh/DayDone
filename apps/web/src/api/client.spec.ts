@@ -146,4 +146,102 @@ describe('API Client (apps/web)', () => {
     expect(results[1].data).toEqual([{ id: 'log-1' }]);
     expect(results[2].data).toEqual([{ id: 'log-1' }]);
   });
+
+  it('REFRESH LINTAS TAB: menggunakan navigator.locks.request("daydone-refresh") bila didukung browser', async () => {
+    const requestMock = vi.fn().mockImplementation(async (_name: string, cb: () => Promise<unknown>) => {
+      return await cb();
+    });
+
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      locks: {
+        request: requestMock,
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        accessToken: 'token-from-web-lock',
+        user: { id: 'u1', email: 'u1@test.com', name: 'U1', avatarUrl: null, driveStatus: 'CONNECTED' },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const token = await refreshSession();
+
+    expect(requestMock).toHaveBeenCalledWith('daydone-refresh', expect.any(Function));
+    expect(token).toBe('token-from-web-lock');
+    expect(getAccessToken()).toBe('token-from-web-lock');
+  });
+
+  it('REFRESH LINTAS TAB: antrean Web Locks menserialisasi refresh agar berjalan berurutan', async () => {
+    let isLocked = false;
+    const executionOrder: string[] = [];
+
+    const requestMock = vi.fn().mockImplementation(async (_name: string, cb: () => Promise<unknown>) => {
+      while (isLocked) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      isLocked = true;
+      try {
+        return await cb();
+      } finally {
+        isLocked = false;
+      }
+    });
+
+    vi.stubGlobal('navigator', {
+      locks: { request: requestMock },
+    });
+
+    let refreshIdx = 0;
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      refreshIdx++;
+      const current = refreshIdx;
+      executionOrder.push(`start-${current}`);
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      executionOrder.push(`end-${current}`);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          accessToken: `token-${current}`,
+          user: { id: 'u1', email: 'u1@test.com', name: 'U1', avatarUrl: null, driveStatus: 'CONNECTED' },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Tab 1 memanggil refreshSession()
+    const p1 = refreshSession();
+    // Simulasi Tab 2 (instance tab terpisah yang antre pada lock yang sama)
+    const p2 = navigator.locks.request('daydone-refresh', async () => {
+      return await fetchMock();
+    });
+
+    await Promise.all([p1, p2]);
+
+    // Tab 1 selesai sebelum Tab 2 mulai mengeksekusi fetch
+    expect(executionOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+  });
+
+  it('REFRESH FALLBACK: tetap berfungsi normal bila navigator.locks tidak tersedia', async () => {
+    vi.stubGlobal('navigator', {});
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        accessToken: 'token-no-locks',
+        user: { id: 'u1', email: 'u1@test.com', name: 'U1', avatarUrl: null, driveStatus: 'CONNECTED' },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const token = await refreshSession();
+    expect(token).toBe('token-no-locks');
+    expect(getAccessToken()).toBe('token-no-locks');
+  });
 });

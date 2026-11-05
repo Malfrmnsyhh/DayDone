@@ -51,9 +51,45 @@ function notifyAuthFailure(): void {
 }
 
 /**
+ * Eksekusi panggilan HTTP /auth/refresh.
+ */
+async function executeRefreshNetwork(): Promise<string | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      clearSession();
+      notifyAuthFailure();
+      return null;
+    }
+
+    const data = (await res.json()) as AuthResponse;
+    accessToken = data.accessToken;
+    if (data.user) {
+      currentUser = data.user;
+    }
+    return data.accessToken;
+  } catch {
+    clearSession();
+    notifyAuthFailure();
+    return null;
+  }
+}
+
+/**
  * Single-flight refresh token:
- * Menjamin hanya ada 1 network request /auth/refresh yang berjalan pada satu waktu.
- * Semua pemanggil lain (request paralel 401, React StrictMode) menunggu promise yang sama.
+ * Menjamin hanya ada 1 network request /auth/refresh yang berjalan pada satu waktu di dalam tab.
+ * Bila didukung oleh browser, Web Locks API (navigator.locks) digunakan untuk menserialisasi
+ * refresh lintas tab agar beberapa tab yang dibuka/refresh bersamaan tidak memicu race condition
+ * atau reuse detection; tab berikutnya akan menggunakan cookie yang telah dirotasi oleh tab sebelumnya.
  */
 export async function refreshSession(): Promise<string | null> {
   if (refreshPromise) {
@@ -62,28 +98,16 @@ export async function refreshSession(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        clearSession();
-        notifyAuthFailure();
-        return null;
+      if (
+        typeof navigator !== 'undefined' &&
+        'locks' in navigator &&
+        typeof navigator.locks?.request === 'function'
+      ) {
+        return await navigator.locks.request('daydone-refresh', () =>
+          executeRefreshNetwork(),
+        );
       }
-
-      const data = (await res.json()) as AuthResponse;
-      accessToken = data.accessToken;
-      if (data.user) {
-        currentUser = data.user;
-      }
-      return data.accessToken;
+      return await executeRefreshNetwork();
     } catch {
       clearSession();
       notifyAuthFailure();
