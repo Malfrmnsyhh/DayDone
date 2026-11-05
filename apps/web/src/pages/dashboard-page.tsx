@@ -1,5 +1,6 @@
-import { CheckCircle, Cloud, LogOut, User as UserIcon } from 'lucide-react';
+import { CheckCircle, Cloud, LogOut } from 'lucide-react';
 import { useAuth } from '../auth/auth-context.js';
+import { UserAvatar } from '../components/user-avatar.js';
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
@@ -43,17 +44,11 @@ export function DashboardPage() {
 
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name || 'User'}
-                  className="h-8 w-8 rounded-full border border-slate-200 object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                  <UserIcon className="h-4 w-4" />
-                </div>
-              )}
+              <UserAvatar
+                name={user?.name}
+                avatarUrl={user?.avatarUrl}
+                sizeClassName="h-8 w-8 text-xs"
+              />
               <div className="hidden text-left sm:block">
                 <p className="text-xs font-semibold text-slate-900">{user?.name}</p>
                 <p className="text-[11px] text-slate-500">{user?.email}</p>
