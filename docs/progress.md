@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M7 - Fase A)
+**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M7 - Fase B)
 
 ## Status per milestone
 
@@ -15,7 +15,7 @@
 | M4 Autentikasi Google + sesi | Selesai |
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
-| M7 Paket shared dan web dashboard | Sedang berjalan — Fase A selesai |
+| M7 Paket shared dan web dashboard | Sedang berjalan — Fase B selesai |
 | M8 Aplikasi mobile | Belum dimulai |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
@@ -125,15 +125,45 @@
   - Dockerfile multi-stage diperbarui untuk menyertakan `packages/shared` dan mem-build-nya sebelum `apps/api`.
   - `pnpm build`, `pnpm lint`, dan `pnpm test` lolos 100% di seluruh paket monorepo.
 
+### M7 (Fase B — Fitur Logbook Web Dashboard)
+- [x] M7-6 Helper Tanggal Lokal & Format Indonesia (`apps/web/src/lib/date.ts`):
+  - `getTodayLocalDateString()` menghitung tanggal lokal `YYYY-MM-DD` perangkat tanpa offset UTC.
+  - `parseLocalDate()` mencegah pergeseran zona waktu saat parsing `YYYY-MM-DD`.
+  - Format Indonesia berbasis `Intl.DateTimeFormat('id-ID')`.
+- [x] M7-7 TanStack Query Hooks (`apps/web/src/api/logs.ts`):
+  - `useLogsList`, `useLogByDate`, `useLogDetail`, `useCreateLog`, `useUpdateLog`, `useDeleteLog` dengan invalidasi otomatis.
+- [x] M7-8 Layout Responsif & Header (`apps/web/src/components/layout/app-layout.tsx`):
+  - Sticky header dengan `UserAvatar` (fallback inisial), badge status Drive, dan tombol Logout.
+- [x] M7-9 Kartu "Hari Ini" (`apps/web/src/components/dashboard/today-card.tsx`):
+  - Deteksi logbook hari ini (`GET /logs/by-date/:today`), menampilkan ajakan menulis bila belum ada atau tautan detail bila sudah dibuat.
+- [x] M7-10 Daftar Logbook, Filter & Paginasi (`apps/web/src/pages/dashboard-page.tsx`):
+  - Input pencarian (debounce 300ms) + filter tanggal `from` dan `to` (max = hari ini).
+  - State filter dan nomor halaman tersimpan di URL search params (`useSearchParams`) sehingga tombol Back mempertahankan kondisi filter sebelumnya; perubahan filter otomatis mereset halaman ke 1.
+  - `LogCard` menampilkan tanggal lokal, snippet deskripsi, jumlah foto, dan thumbnail foto pertama dengan fallback placeholder.
+  - State `EmptyState` (untuk daftar kosong atau pencarian nihil), `ErrorState` (dengan tombol "Coba Lagi"), dan `ListSkeleton`.
+- [x] M7-11 Form Buat & Ubah Logbook (`apps/web/src/pages/log-form-page.tsx`):
+  - Validasi Zod DTO dari `@daydone/shared` via custom `zodResolver` kompatibel Zod 4.
+  - Tanggal TIDAK di-disable pada mode ubah (mendukung US-07).
+  - Input tanggal dibatasi `max = hari ini` lokal.
+  - Counter karakter deskripsi (`X / 5000`).
+  - Penanganan error 409 `LOG_DATE_CONFLICT` pada mode buat maupun ubah dengan pesan jelas dan tautan "Buka logbook tanggal itu" (`existingLogId`).
+  - Tombol Simpan disabled saat mutasi berjalan untuk mencegah klik ganda.
+  - Konfirmasi unsaved changes via `useBlocker` React Router dan event `beforeunload`.
+- [x] M7-12 Detail Logbook & Hapus (`apps/web/src/pages/log-detail-page.tsx`):
+  - Deskripsi disajikan sebagai teks murni (`whitespace-pre-wrap`), dilarang `dangerouslySetInnerHTML`.
+  - Halaman 404 ramah pengguna (`NotFoundState`) saat logbook tidak ditemukan.
+  - Dialog konfirmasi hapus modal (`ConfirmModal`) sebelum mutasi `DELETE /logs/:id`.
+
 ## Task berikutnya untuk agent
 
-1. Tunggu konfirmasi pengujian manual dari pemilik untuk Fase A (login, reload tetap login, dua tab, logout).
-2. Lanjutkan ke **Milestone M7 Fase B — Logbook**:
-   - Layout dashboard responsif (nyaman di HP, header avatar dan nama).
-   - Daftar logbook (US-05): urutan terbaru, filter rentang tanggal, pencarian debounce, paginasi, thumbnail, state kosong.
-   - Kartu "Hari ini" (GET `/logs/by-date/:date`).
-   - Form buat/ubah logbook (US-04, US-07) dengan Zod resolver dan penanganan `LOG_DATE_CONFLICT`.
-   - Detail logbook (US-06) dan dialog konfirmasi hapus (US-08).
+1. Tunggu konfirmasi pengujian manual dari pemilik untuk Fase B.
+2. Lanjutkan ke **Milestone M7 Fase C — Foto, Google Drive & Pengaturan Akun**:
+   - Transaksi penguncian baris logbook `SELECT ... FOR UPDATE` di backend `AttachmentsService` untuk mencegah race condition kuota 5 foto.
+   - Unggah foto (US-09): drag-and-drop / file picker, validasi klien (ukuran, kuota, MIME), unggah satu per satu dengan XMLHttpRequest progress bar.
+   - Galeri foto penuh + lightbox, hapus foto (US-10).
+   - Penanganan signed URL kedaluwarsa: refetch detail bila `<img>` gagal dimuat (staleTime < 5 menit).
+   - Banner Google Drive (US-11): NOT_CONNECTED -> hubungkan, NEEDS_RECONNECT -> modal instruksi & hubungkan ulang.
+   - Halaman pengaturan & hapus akun permanen (US-12).
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -179,6 +209,9 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-05 — Single-flight refresh di API client web — promise refresh bersama di tingkat modul mencegah race condition dan kegagalan rotasi refresh token akibat request paralel atau React StrictMode.
 - 2026-11-05 — Pemakaian Google Identity Services (GIS) `initCodeClient` langsung tanpa library wrapper — menghindari konflik peer-dependency React 19 dan menjaga integrasi popup tetap transparan serta konsisten dengan uji M4.
 - 2026-11-05 — Serialisasi refresh token lintas tab dengan Web Locks API — membungkus pemanggilan `/auth/refresh` dengan `navigator.locks.request('daydone-refresh', ...)` agar refresh dari beberapa tab berjalan bergantian; tab yang menunggu secara otomatis menggunakan cookie hasil rotasi tab sebelumnya, dengan fallback graceful bila API tidak didukung browser.
+- 2026-11-05 — Parameter filter logbook disimpan di URL search params (`useSearchParams`) — memastikan tombol browser Back mengembalikan state daftar yang sama persis dan memudahkan pembagian link.
+- 2026-11-05 — Tanggal logbook dapat diubah pada mode edit — mematuhi US-07 dan kemampuan endpoint PATCH /logs/:id, dengan penanganan konflik 409 yang identik dengan mode buat.
+- 2026-11-05 — Custom Zod resolver untuk react-hook-form — mengatasi ketidakcocokan format error internal antara Zod v4 (issues) dan @hookform/resolvers/zod v3 (errors).
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
@@ -259,3 +292,11 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - `localStorage` dan `sessionStorage` rentan dibaca oleh script apa pun yang dieksekusi di browser (misalnya celah XSS atau library pihak ketiga yang disusupi).
     - Dengan menyimpan access token hanya di variabel JavaScript (RAM browser), token tidak dapat diekstrak via storage inspector dan otomatis bersih saat tab browser ditutup.
     - Pemulihan sesi antar reload/buka tab baru dilakukan secara aman melalui cookie `daydone_rt` bertipe `HttpOnly`, `Path=/api/v1/auth`, dan `SameSite=Lax`. JavaScript tidak memiliki akses ke cookie ini, dan browser menyertakannya secara otomatis hanya saat memanggil rute autentikasi.
+
+19. **Penyimpanan State Filter di URL Search Params (`apps/web/src/components/dashboard/log-filter-bar.tsx`)**:
+    - Alih-alih menyimpan `search`, `from`, `to`, dan `page` hanya di React `useState`, menyimpannya di URL (`useSearchParams`) memberikan UX standar web: riwayat navigasi browser bekerja alami, tombol "Back" dari halaman detail tidak menghilangkan hasil pencarian, dan tautan halaman tertentu dapat di-bookmark atau dibagikan.
+
+20. **Proteksi Form Kotor dengan `useBlocker` dan `beforeunload` (`apps/web/src/pages/log-form-page.tsx`)**:
+    - SPA memiliki dua jenis navigasi: navigasi internal (SPA routing) dan navigasi browser (tutup tab / refresh / ketik URL baru).
+    - `useBlocker` dari React Router data router memotong navigasi internal saat form berstatus `isDirty`, menampilkan modal dialog konfirmasi tanpa memicu reload halaman.
+    - Event browser `window.addEventListener('beforeunload', ...)` melindungi saat pengguna tidak sengaja menutup tab atau menekan F5, sehingga draf catatan tidak hilang sia-sia.
