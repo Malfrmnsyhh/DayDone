@@ -225,6 +225,44 @@ describe('Attachments & Storage Integration (e2e)', () => {
       expect(overRes.status).toBe(409);
       expect(overRes.body.code).toBe('ATTACHMENT_LIMIT_REACHED');
     });
+
+    it('dua request upload multipart paralel yang total filenya melebihi kuota 5 ditangani secara konkuren: tepat 1 berhasil dan 1 ditolak 409 ATTACHMENT_LIMIT_REACHED', async () => {
+      // Buat logbook baru untuk user A
+      const logConcurrentRes = await request(app.getHttpServer())
+        .post('/api/v1/logs')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ date: '2026-10-24', description: 'Log untuk konkurensi upload' });
+      const concurrentLogId = logConcurrentRes.body.id;
+
+      // Jalankan 2 request upload paralel secara simultan (masing-masing kirim 3 file, total 6 > 5)
+      const req1 = request(app.getHttpServer())
+        .post(`/api/v1/logs/${concurrentLogId}/attachments`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .attach('files', sampleJpeg, 'req1-file1.jpg')
+        .attach('files', sampleJpeg, 'req1-file2.jpg')
+        .attach('files', sampleJpeg, 'req1-file3.jpg');
+
+      const req2 = request(app.getHttpServer())
+        .post(`/api/v1/logs/${concurrentLogId}/attachments`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .attach('files', sampleJpeg, 'req2-file1.jpg')
+        .attach('files', sampleJpeg, 'req2-file2.jpg')
+        .attach('files', sampleJpeg, 'req2-file3.jpg');
+
+      const [res1, res2] = await Promise.all([req1, req2]);
+
+      const statuses = [res1.status, res2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
+
+      const failedRes = res1.status === 409 ? res1 : res2;
+      expect(failedRes.body.code).toBe('ATTACHMENT_LIMIT_REACHED');
+
+      // Pastikan di database total lampiran tetap tepat 3 (<= 5)
+      const dbCount = await prisma.attachment.count({
+        where: { logEntryId: concurrentLogId },
+      });
+      expect(dbCount).toBe(3);
+    });
   });
 
   describe('Signed URL & Konten Lampiran', () => {

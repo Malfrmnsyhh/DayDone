@@ -49,12 +49,14 @@ describe('AttachmentsService', () => {
     vi.clearAllMocks();
 
     mockPrisma = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: logId }]),
       logEntry: {
         findFirst: vi.fn().mockResolvedValue(dummyLog),
       },
       attachment: {
         findFirst: vi.fn(),
         findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
         create: vi.fn((args: any) => ({
           ...args.data,
           createdAt: new Date('2026-11-03T10:00:00.000Z'),
@@ -217,6 +219,20 @@ describe('AttachmentsService', () => {
       ).rejects.toThrow('DB transaction error');
 
       expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-1');
+    });
+
+    it('menolak dengan 409 ATTACHMENT_LIMIT_REACHED bila kuota terisi oleh upload paralel saat di dalam transaksi', async () => {
+      mockPrisma.attachment.count.mockResolvedValueOnce(5);
+
+      try {
+        await service.uploadAttachments(userId, logId, [dummyFile]);
+        expect.unreachable();
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(DomainException);
+        expect(err.code).toBe(ErrorCode.ATTACHMENT_LIMIT_REACHED);
+      }
+
+      expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-123');
     });
   });
 

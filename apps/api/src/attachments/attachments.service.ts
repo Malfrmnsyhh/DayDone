@@ -172,11 +172,40 @@ export class AttachmentsService {
       throw uploadError;
     }
 
-    // 6. Simpan seluruh lampiran ke database dalam transaksi Prisma
+    // 6. Simpan seluruh lampiran ke database dalam transaksi Prisma dengan row-locking
     try {
-      const createdAttachments = await this.prisma.$transaction(
-        uploadedRecords.map((rec) =>
-          this.prisma.attachment.create({
+      const createdAttachments = await this.prisma.$transaction(async (tx) => {
+        // Kunci baris logbook secara eksklusif agar request upload paralel menunggu giliran
+        await tx.$queryRaw`SELECT id FROM "log_entries" WHERE id = ${logId}::uuid AND "userId" = ${userId}::uuid FOR UPDATE;`;
+
+        // Cek ulang jumlah lampiran saat ini di bawah lock transaksi
+        const currentCount = await tx.attachment.count({
+          where: { logEntryId: logId },
+        });
+
+        if (currentCount + uploadedRecords.length > 5) {
+          throw new DomainException(
+            HttpStatus.CONFLICT,
+            `Jumlah lampiran melebihi batas. Logbook sudah memiliki ${currentCount} lampiran, maksimal 5 lampiran per logbook`,
+            ErrorCode.ATTACHMENT_LIMIT_REACHED,
+          );
+        }
+
+        // Tentukan posisi urutan terbaru
+        const existingAttachments = await tx.attachment.findMany({
+          where: { logEntryId: logId },
+          select: { position: true },
+          orderBy: { position: 'asc' },
+        });
+        const currentMax = existingAttachments.reduce(
+          (max, a) => Math.max(max, a.position),
+          -1,
+        );
+        let currPos = currentMax + 1;
+
+        const results = [];
+        for (const rec of uploadedRecords) {
+          const created = await tx.attachment.create({
             data: {
               id: rec.id,
               logEntryId: logId,
@@ -186,11 +215,14 @@ export class AttachmentsService {
               sizeBytes: rec.sizeBytes,
               width: rec.width,
               height: rec.height,
-              position: rec.position,
+              position: currPos++,
             },
-          }),
-        ),
-      );
+          });
+          results.push(created);
+        }
+
+        return results;
+      });
 
       return createdAttachments.map((att) => {
         const { url, expiresAt } = this.signedUrlService.generateUrl(
@@ -210,7 +242,7 @@ export class AttachmentsService {
         };
       });
     } catch (dbError: unknown) {
-      // Kompensasi: jika penyimpanan DB gagal, trash semua file yang sudah terunggah
+      // Kompensasi: jika penyimpanan DB gagal atau kuota terlampaui, trash semua file yang sudah terunggah
       this.logger.error(
         `Insert DB lampiran gagal untuk log ${logId}, melakukan kompensasi trash file di Drive`,
       );
