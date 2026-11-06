@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 5 November 2026 (penyelesaian Milestone M7 - Fase B)
+**Terakhir diperbarui:** 6 November 2026 (penyelesaian Milestone M7 - Fase C)
 
 ## Status per milestone
 
@@ -15,7 +15,7 @@
 | M4 Autentikasi Google + sesi | Selesai |
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
-| M7 Paket shared dan web dashboard | Sedang berjalan — Fase B selesai |
+| M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
 | M8 Aplikasi mobile | Belum dimulai |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
@@ -159,15 +159,34 @@
   - Ubah logbook & Hapus logbook: OK
   - Penyelarasan kontrak response logbook tunggal (objek `Log` langsung tanpa wrapper `data`): OK
 
+### M7 (Fase C — Foto Dokumentasi, Google Drive & Pengaturan Akun)
+- [x] M7-13 Penguatan Concurrency Backend API (`apps/api/src/attachments/attachments.service.ts`):
+  - Pessimistic row locking PostgreSQL: `SELECT id FROM "log_entries" WHERE id = $1::uuid AND "userId" = $2::uuid FOR UPDATE` di dalam `prisma.$transaction`.
+  - Pengecekan ulang jumlah lampiran di bawah kunci transaksi; bila paralel upload melebihi batas 5, request kalah balapan deterministik ditolak dengan `409 ATTACHMENT_LIMIT_REACHED` dan file di Drive di-trash secara otomatis.
+  - E2E concurrency test di `apps/api/test/attachments.e2e-spec.ts` memverifikasi 2 upload paralel melebihi 5 foto menghasilkan tepat 1 sukses (201) dan 1 ditolak (409).
+- [x] M7-14 Klien Unggah XHR & Progress Tracking (`apps/web/src/api/attachments.ts` & `photo-upload-dropzone.tsx`):
+  - `uploadAttachmentXHR` menggunakan `XMLHttpRequest` dan `upload.onprogress` untuk memantau progress akurat (0–100%) per file.
+  - Validasi sisi klien: format MIME (`image/jpeg`, `image/png`, `image/webp`), batas ukuran 10 MB per file, dan sisa kuota (maksimal 5 foto per logbook).
+  - Unggah berurutan (sequential) untuk stabilitas jaringan dan visualisasi status per item (Menunggu, Mengunggah, Selesai, Gagal).
+- [x] M7-15 Galeri Foto & Lightbox Modal (`apps/web/src/components/attachments/`):
+  - `PhotoGallery`: grid thumbnail foto responsif, tombol hapus per foto dengan dialog konfirmasi `ConfirmModal`, dan fail-safe `onError` yang otomatis me-refresh query detail saat signed URL kedaluwarsa.
+  - `PhotoLightbox`: modal fullscreen dengan navigasi keyboard lengkap (`Escape` untuk menutup, `ArrowLeft` dan `ArrowRight` untuk berpindah foto), image counter, dan trap fokus.
+  - Penyesuaian query cache `staleTime: 4 * 60 * 1000` (< 5 menit) pada `useLogDetail`.
+- [x] M7-16 Banner Status Google Drive & Rekoneksi OAuth (`apps/web/src/components/drive/drive-banner.tsx`):
+  - Komponen banner di Dashboard dan halaman detail untuk kondisi `NOT_CONNECTED` dan `NEEDS_RECONNECT`.
+  - Tombol rekoneksi memicu popup Google Identity Services (GIS) `initCodeClient` dengan parameter wajib `prompt: 'consent'` agar Google selalu mengembalikan refresh token baru.
+- [x] M7-17 Halaman Pengaturan Akun & Hapus Akun (`apps/web/src/pages/settings-page.tsx` & `api/users.ts`):
+  - Rute baru `/settings` terdaftar di bawah `ProtectedRoute` dan `AppLayout` dengan tombol pintasan di header.
+  - Rincian profil pengguna, kartu status koneksi Google Drive, dan tombol keluar.
+  - Danger Zone: penjelasan penghapusan akun (data DB terhapus, foto di Drive tetap ada) dengan modal konfirmasi ketat mewajibkan pengetikan kata `"HAPUS"` huruf kapital persis sebelum eksekusi `DELETE /users/me`.
+- [x] M7-18 Pengujian Lengkap Monorepo:
+  - Unit & component tests untuk Dropzone, Galeri, Lightbox, Banner Drive, dan Halaman Pengaturan lolos 100% (43 tests di `apps/web`, 145 tests di `apps/api`, 8 tests di `packages/shared`). Total 196 unit tests.
+  - Build dan lint seluruh paket monorepo lolos tanpa peringatan atau error (`pnpm -r build`, `pnpm -r lint`).
+
 ## Task berikutnya untuk agent
 
-1. Tunggu persetujuan/instruksi dari pemilik untuk memulai **Milestone M7 Fase C — Foto, Google Drive & Pengaturan Akun**:
-   - Transaksi penguncian baris logbook `SELECT ... FOR UPDATE` di backend `AttachmentsService` untuk mencegah race condition kuota 5 foto.
-   - Unggah foto (US-09): drag-and-drop / file picker, validasi klien (ukuran, kuota, MIME), unggah satu per satu dengan XMLHttpRequest progress bar.
-   - Galeri foto penuh + lightbox, hapus foto (US-10).
-   - Penanganan signed URL kedaluwarsa: refetch detail bila `<img>` gagal dimuat (staleTime < 5 menit).
-   - Banner Google Drive (US-11): NOT_CONNECTED -> hubungkan, NEEDS_RECONNECT -> modal instruksi & hubungkan ulang.
-   - Halaman pengaturan & hapus akun permanen (US-12).
+1. Berikan panduan pengujian manual Milestone M7 Fase C kepada pemilik proyek untuk diverifikasi di browser (`http://localhost:5173`).
+2. Tunggu persetujuan pemilik setelah uji manual selesai sebelum melanjutkan ke Milestone berikutnya (M8 Mobile Expo atau M9 Deployment Produksi).
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
@@ -217,6 +236,10 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-05 — Tanggal logbook dapat diubah pada mode edit — mematuhi US-07 dan kemampuan endpoint PATCH /logs/:id, dengan penanganan konflik 409 yang identik dengan mode buat.
 - 2026-11-05 — Custom Zod resolver untuk react-hook-form — mengatasi ketidakcocokan format error internal antara Zod v4 (issues) dan @hookform/resolvers/zod v3 (errors).
 - 2026-11-05 — Penyelarasan kontrak API entitas Log tunggal di web client — endpoint log tunggal (GET /logs/:id, GET /logs/by-date/:date, POST /logs, PATCH /logs/:id) mengembalikan objek Log langsung tanpa pembungkus { data: Log }, berbeda dari paginated list (GET /logs) yang memiliki wrapper { data, meta }.
+- 2026-11-06 — Pessimistic Row Locking pada unggah lampiran (`SELECT ... FOR UPDATE`) — mengunci baris logbook di PostgreSQL di dalam transaksi Prisma saat insert lampiran untuk mencegah race condition unggahan paralel melebihi batas kuota 5 lampiran secara deterministik.
+- 2026-11-06 — Pengunggahan foto berurutan (sequential) via XHR — mengeksekusi unggahan file dalam antrean satu demi satu untuk menjamin kestabilan koneksi, pelacakan progress akurat per file (0–100%), dan menghindari kegagalan upload paralel di browser.
+- 2026-11-06 — Fail-Safe Signed URL kedaluwarsa — mengombinasikan `staleTime: 4 menit` pada TanStack Query (< masa berlaku token 5 menit) dengan handler `onError` pada elemen `<img>` yang otomatis me-refetch detail logbook sekali per ID lampiran untuk memperbarui token URL yang hangus tanpa reload halaman.
+- 2026-11-06 — Validasi teks konfirmasi hapus akun ketat — mewajibkan pengguna mengetik kata `"HAPUS"` huruf kapital persis di modal dialog sebelum tombol eksekusi mutasi `DELETE /users/me` dapat diaktifkan.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
@@ -305,3 +328,15 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - SPA memiliki dua jenis navigasi: navigasi internal (SPA routing) dan navigasi browser (tutup tab / refresh / ketik URL baru).
     - `useBlocker` dari React Router data router memotong navigasi internal saat form berstatus `isDirty`, menampilkan modal dialog konfirmasi tanpa memicu reload halaman.
     - Event browser `window.addEventListener('beforeunload', ...)` melindungi saat pengguna tidak sengaja menutup tab atau menekan F5, sehingga draf catatan tidak hilang sia-sia.
+
+21. **Pessimistic Row Locking pada Concurrency Database (`apps/api/src/attachments/attachments.service.ts`)**:
+    - Masalah race condition terjadi bila dua request unggah foto masuk secara bersamaan untuk logbook yang sama. Tanpa proteksi, kedua request sama-sama membaca `count = 3`, keduanya menganggap kuota masih cukup (3 + 2 = 5), dan keduanya berhasil meng-insert, menghasilkan total 7 lampiran (melebihi batas maksimal 5!).
+    - Dengan membungkus insert ke dalam `prisma.$transaction` dan mengeksekusi `SELECT id FROM "log_entries" WHERE id = $1 FOR UPDATE`, PostgreSQL mengunci baris logbook tersebut secara eksklusif. Request paralel kedua terpaksa menunggu sampai transaksi request pertama selesai (`COMMIT`). Saat request kedua gilirannya jalan, penghitungan `currentCount` membaca nilai terbaru yang sudah ter-update (5), sehingga request kedua langsung ditolak dengan `409 ATTACHMENT_LIMIT_REACHED`.
+
+22. **Pelacakan Progress Unggah Multipart dengan `XMLHttpRequest` vs `fetch` (`apps/web/src/api/attachments.ts`)**:
+    - Standar `fetch` browser hingga saat ini belum mendukung pemantauan upload progress stream secara luas tanpa ReadableStream Request body yang rumit dan terbatas dukungannya.
+    - `XMLHttpRequest` menyediakan event `xhr.upload.onprogress` bawaan yang memberikan nilai `loaded` dan `total` secara native dan akurat. Menggabungkan `new Promise((resolve, reject) => { ... })` dengan XHR memungkinkan kita membuat fungsi async yang bersih dengan feedback visual persentase 0–100% per file.
+
+23. **Mitigasi Signed URL Kedaluwarsa di SPA Frontend (`apps/web/src/components/attachments/photo-gallery.tsx`)**:
+    - Signed URL gambar memiliki masa berlaku pendek (5 menit) demi keamanan. Jika tab logbook dibiarkan terbuka lebih dari 5 menit, gambar akan gagal dimuat atau pecah saat pengguna melihat galeri.
+    - Solusi dua lapis diterapkan: pertama, `staleTime: 4 * 60 * 1000` (4 menit) pada TanStack Query memastikan saat pengguna kembali ke tab, query otomatis dianggap stale dan me-refetch URL baru sebelum masa 5 menit habis. Kedua, jika URL sempat kedaluwarsa, event `onError` pada tag `<img>` bertindak sebagai jaring pengaman (*fail-safe*) yang secara otomatis memicu `queryClient.invalidateQueries` satu kali untuk mendapatkan URL segar tanpa perlu me-reload seluruh halaman.
