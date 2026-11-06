@@ -1,25 +1,28 @@
 import {
   ArrowLeft,
   Calendar,
-  Image as ImageIcon,
   Pencil,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDeleteLog, useLogDetail } from '../api/logs.js';
+import { useAuth } from '../auth/auth-context.js';
+import { PhotoGallery } from '../components/attachments/photo-gallery.js';
+import { PhotoUploadDropzone } from '../components/attachments/photo-upload-dropzone.js';
 import { ConfirmModal } from '../components/common/confirm-modal.js';
 import { ErrorState } from '../components/common/error-state.js';
 import { DetailSkeleton } from '../components/common/loading-skeleton.js';
 import { NotFoundState } from '../components/common/not-found-state.js';
+import { DriveBanner } from '../components/drive/drive-banner.js';
 import { formatDateIndonesian } from '../lib/date.js';
 
 export function LogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   const { data: log, isLoading, isError, error, refetch } = useLogDetail(id);
   const deleteMutation = useDeleteLog();
@@ -63,12 +66,13 @@ export function LogDetailPage() {
     }
   };
 
-  const markImgFailed = (attId: string) => {
-    setImgErrors((prev) => ({ ...prev, [attId]: true }));
-  };
+  const attachments = log.attachments || [];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Banner Peringatan Google Drive bila belum terhubung / terputus */}
+      <DriveBanner />
+
       {/* Bar Navigasi Kembali */}
       <div className="flex items-center justify-between">
         <Link
@@ -125,46 +129,27 @@ export function LogDetailPage() {
           </div>
         </div>
 
-        {/* Lampiran Foto (Bila ada) */}
-        {log.attachments && log.attachments.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Dokumentasi Foto ({log.attachments.length})
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {log.attachments.map((att) => {
-                const isFailed = imgErrors[att.id];
-
-                return (
-                  <div
-                    key={att.id}
-                    className="relative aspect-4/3 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden"
-                  >
-                    {att.url && !isFailed ? (
-                      <img
-                        src={att.url}
-                        alt="Foto dokumentasi logbook"
-                        referrerPolicy="no-referrer"
-                        onError={() => markImgFailed(att.id)}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center p-3 text-center text-slate-400">
-                        <ImageIcon className="h-6 w-6 mb-1" />
-                        <span className="text-[10px] text-slate-500">
-                          {isFailed ? 'Gagal memuat' : 'Foto tersimpan'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+        {/* Galeri Foto Dokumentasi */}
+        {attachments.length > 0 && (
+          <div className="pt-2">
+            <PhotoGallery
+              attachments={attachments}
+              logId={log.id}
+            />
           </div>
         )}
+
+        {/* Area Unggah Foto Dropzone */}
+        <div className="pt-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+            {attachments.length > 0 ? 'Tambah Foto Dokumentasi' : 'Foto Dokumentasi'}
+          </h3>
+          <PhotoUploadDropzone
+            logId={log.id}
+            currentAttachmentCount={attachments.length}
+            driveStatus={user?.driveStatus}
+          />
+        </div>
       </div>
 
       {/* Modal Dialog Konfirmasi Hapus Logbook */}

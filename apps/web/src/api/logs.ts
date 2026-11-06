@@ -58,6 +58,7 @@ export function useLogDetail(id?: string) {
     queryKey: ['logs', 'detail', id],
     queryFn: () => apiFetch<Log>(`/logs/${id}`),
     enabled: Boolean(id),
+    staleTime: 4 * 60 * 1000, // < 5 menit sesuai masa berlaku signed URL (5 menit)
     retry: (failureCount, error: any) => {
       // Jangan retry jika 404 Not Found
       if (error?.statusCode === 404) return false;
