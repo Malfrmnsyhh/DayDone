@@ -118,3 +118,4 @@ describe('PhotoUploadDropzone Component', () => {
     expect(input).toBeDisabled();
   });
 });
+

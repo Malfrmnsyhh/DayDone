@@ -19,7 +19,9 @@ export class SignedUrlService {
   private readonly publicApiUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.secret = this.configService.getOrThrow<string>('ATTACHMENT_URL_SECRET');
+    this.secret = this.configService.getOrThrow<string>(
+      'ATTACHMENT_URL_SECRET',
+    );
     this.publicApiUrl = this.configService
       .getOrThrow<string>('PUBLIC_API_URL')
       .replace(/\/$/, '');
@@ -116,4 +118,3 @@ export class SignedUrlService {
     };
   }
 }
-

@@ -208,7 +208,9 @@ describe('GoogleDriveStorage', () => {
     });
 
     it('invalid_grant memetakan ke DRIVE_RECONNECT_REQUIRED dan mengupdate status user di DB', async () => {
-      mockDriveFilesCreate.mockRejectedValueOnce(new Error('invalid_grant: Bad Request'));
+      mockDriveFilesCreate.mockRejectedValueOnce(
+        new Error('invalid_grant: Bad Request'),
+      );
 
       await expect(
         storage.upload('user-1', {
@@ -278,4 +280,3 @@ describe('GoogleDriveStorage', () => {
     });
   });
 });
-

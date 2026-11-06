@@ -19,13 +19,17 @@ describe('SignedUrlService', () => {
       }),
     };
 
-    service = new SignedUrlService(mockConfigService as unknown as ConfigService);
+    service = new SignedUrlService(
+      mockConfigService as unknown as ConfigService,
+    );
   });
 
   it('menghasilkan URL bertanda tangan dengan format yang benar', () => {
     const result = service.generateUrl('att-uuid-1', 'user-uuid-1');
 
-    expect(result.url).toContain('http://localhost:3000/api/v1/attachments/att-uuid-1/content?token=');
+    expect(result.url).toContain(
+      'http://localhost:3000/api/v1/attachments/att-uuid-1/content?token=',
+    );
     expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
 
     // Ambil token dari URL
@@ -68,4 +72,3 @@ describe('SignedUrlService', () => {
     expect(service.verifyToken('part1.part2.part3')).toBeNull();
   });
 });
-

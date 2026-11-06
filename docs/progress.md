@@ -182,11 +182,19 @@
 - [x] M7-18 Pengujian Lengkap Monorepo:
   - Unit & component tests untuk Dropzone, Galeri, Lightbox, Banner Drive, dan Halaman Pengaturan lolos 100% (43 tests di `apps/web`, 145 tests di `apps/api`, 8 tests di `packages/shared`). Total 196 unit tests.
   - Build dan lint seluruh paket monorepo lolos tanpa peringatan atau error (`pnpm -r build`, `pnpm -r lint`).
+- [x] M7-Fase C Verifikasi Manual (Dikonfirmasi oleh pemilik proyek di browser):
+  - Unggah foto dengan progress bar XHR (terverifikasi 4 foto dokumentasi berhasil diunggah langsung ke Google Drive): OK
+  - Galeri foto dokumentasi tampil responsif dengan aspek rasio rapi & thumbnail tajam: OK
+  - Indikator sisa kuota dinamis foto (4/5 foto tersimpan, sisa kuota: 1 foto): OK
+  - Lightbox modal layar penuh dengan navigasi keyboard: OK
+  - Hapus foto dengan modal konfirmasi & file otomatis dipindahkan ke Google Drive Trash: OK
+  - Banner peringatan status Google Drive & Halaman Pengaturan (`/settings`) dengan dialog konfirmasi ketik "HAPUS": OK
 
 ## Task berikutnya untuk agent
 
-1. Berikan panduan pengujian manual Milestone M7 Fase C kepada pemilik proyek untuk diverifikasi di browser (`http://localhost:5173`).
-2. Tunggu persetujuan pemilik setelah uji manual selesai sebelum melanjutkan ke Milestone berikutnya (M8 Mobile Expo atau M9 Deployment Produksi).
+1. Tunggu arahan dari pemilik proyek untuk menentukan milestone berikutnya:
+   - **Milestone M8 — Aplikasi Mobile (Expo React Native)**: arsitektur touch-first, offline drafting, kamera & image picker, Google OAuth mobile, sinkronisasi logbook.
+   - **Milestone M9 — Rilis & Deploy Produksi**: deploy API ke Render / Railway (M6-6 & M9-0), deploy Web Dashboard ke Vercel (M7-11), verifikasi HTTPS & custom domain, monitoring.
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 

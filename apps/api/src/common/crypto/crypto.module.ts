@@ -7,4 +7,3 @@ import { EncryptionService } from './encryption.service.js';
   exports: [EncryptionService],
 })
 export class CryptoModule {}
-

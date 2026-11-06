@@ -4,9 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Options } from 'pino-http';
 import { stdSerializers } from 'pino-http';
 
-export function createPinoHttpConfig(
-  configService?: ConfigService,
-): Options {
+export function createPinoHttpConfig(configService?: ConfigService): Options {
   const nodeEnv =
     configService?.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
   const isDev = nodeEnv === 'development';
@@ -45,14 +43,13 @@ export function createPinoHttpConfig(
     },
     serializers: {
       req: (request: IncomingMessage) => {
-        const rawReq = (
-          request as unknown as { raw?: { body?: unknown } }
-        ).raw;
+        const rawReq = (request as unknown as { raw?: { body?: unknown } }).raw;
         const body =
           rawReq?.body ?? (request as unknown as { body?: unknown }).body;
-        const serialized = stdSerializers.req(
-          request,
-        ) as unknown as Record<string, unknown>;
+        const serialized = stdSerializers.req(request) as unknown as Record<
+          string,
+          unknown
+        >;
 
         if (
           typeof serialized.url === 'string' &&

@@ -110,7 +110,9 @@ describe('AttachmentsService', () => {
 
   describe('uploadAttachments', () => {
     it('berhasil mengunggah file dan mengembalikan metadata lampiran dengan signed url', async () => {
-      const results = await service.uploadAttachments(userId, logId, [dummyFile]);
+      const results = await service.uploadAttachments(userId, logId, [
+        dummyFile,
+      ]);
 
       expect(results).toHaveLength(1);
       expect(results[0]?.fileName).toContain('2026-11-03_');
@@ -204,7 +206,10 @@ describe('AttachmentsService', () => {
         service.uploadAttachments(userId, logId, [dummyFile, dummyFile]),
       ).rejects.toThrow('Network drop on Drive');
 
-      expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-1');
+      expect(mockStorageProvider.trash).toHaveBeenCalledWith(
+        userId,
+        'drive-file-1',
+      );
     });
 
     it('kompensasi: jika insert DB gagal, seluruh file yang sudah diunggah di-trash', async () => {
@@ -212,13 +217,18 @@ describe('AttachmentsService', () => {
         fileId: 'drive-file-1',
         sizeBytes: 100,
       });
-      mockPrisma.$transaction.mockRejectedValueOnce(new Error('DB transaction error'));
+      mockPrisma.$transaction.mockRejectedValueOnce(
+        new Error('DB transaction error'),
+      );
 
       await expect(
         service.uploadAttachments(userId, logId, [dummyFile]),
       ).rejects.toThrow('DB transaction error');
 
-      expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-1');
+      expect(mockStorageProvider.trash).toHaveBeenCalledWith(
+        userId,
+        'drive-file-1',
+      );
     });
 
     it('menolak dengan 409 ATTACHMENT_LIMIT_REACHED bila kuota terisi oleh upload paralel saat di dalam transaksi', async () => {
@@ -232,7 +242,10 @@ describe('AttachmentsService', () => {
         expect(err.code).toBe(ErrorCode.ATTACHMENT_LIMIT_REACHED);
       }
 
-      expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-123');
+      expect(mockStorageProvider.trash).toHaveBeenCalledWith(
+        userId,
+        'drive-file-123',
+      );
     });
   });
 
@@ -252,9 +265,9 @@ describe('AttachmentsService', () => {
     it('menolak 404 bila lampiran tidak ditemukan', async () => {
       mockPrisma.attachment.findFirst.mockResolvedValueOnce(null);
 
-      await expect(service.getAttachmentUrl(userId, 'non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getAttachmentUrl(userId, 'non-existent'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -286,7 +299,10 @@ describe('AttachmentsService', () => {
 
       expect(result.mimeType).toBe('image/jpeg');
       expect(result.sizeBytes).toBe(500);
-      expect(mockStorageProvider.download).toHaveBeenCalledWith(userId, 'drive-file-1');
+      expect(mockStorageProvider.download).toHaveBeenCalledWith(
+        userId,
+        'drive-file-1',
+      );
     });
   });
 
@@ -312,8 +328,10 @@ describe('AttachmentsService', () => {
         where: { id: 'att-2' },
         data: { position: 0 },
       });
-      expect(mockStorageProvider.trash).toHaveBeenCalledWith(userId, 'drive-file-1');
+      expect(mockStorageProvider.trash).toHaveBeenCalledWith(
+        userId,
+        'drive-file-1',
+      );
     });
   });
 });
-

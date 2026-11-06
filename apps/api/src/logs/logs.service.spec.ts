@@ -77,7 +77,9 @@ describe('LogsService', () => {
         },
       );
       mockPrisma.logEntry.create.mockRejectedValue(p2002Error);
-      mockPrisma.logEntry.findFirst.mockResolvedValue({ id: 'existing-id-123' });
+      mockPrisma.logEntry.findFirst.mockResolvedValue({
+        id: 'existing-id-123',
+      });
 
       try {
         await service.create(userId, {

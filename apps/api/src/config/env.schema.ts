@@ -15,14 +15,14 @@ const envSchema = z
     DIRECT_URL: z.string().min(1, 'DIRECT_URL wajib diisi'),
     PUBLIC_API_URL: z
       .string()
-      .url('PUBLIC_API_URL harus berupa URL yang valid (misal http://localhost:3000)')
+      .url(
+        'PUBLIC_API_URL harus berupa URL yang valid (misal http://localhost:3000)',
+      )
       .default('http://localhost:3000'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
 
     // Google OAuth (M4)
-    GOOGLE_WEB_CLIENT_ID: z
-      .string()
-      .min(1, 'GOOGLE_WEB_CLIENT_ID wajib diisi'),
+    GOOGLE_WEB_CLIENT_ID: z.string().min(1, 'GOOGLE_WEB_CLIENT_ID wajib diisi'),
     GOOGLE_WEB_CLIENT_SECRET: z
       .string()
       .min(1, 'GOOGLE_WEB_CLIENT_SECRET wajib diisi'),
@@ -34,11 +34,7 @@ const envSchema = z
     JWT_ACCESS_TTL: z.string().default('15m'),
 
     // Sesi DayDone (M4)
-    REFRESH_TOKEN_TTL_DAYS: z.coerce
-      .number()
-      .int()
-      .positive()
-      .default(30),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
     // Enkripsi Token Google (M4)
     TOKEN_ENCRYPTION_KEY: z

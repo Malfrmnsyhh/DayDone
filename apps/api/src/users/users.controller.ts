@@ -50,7 +50,9 @@ export class UsersController {
    */
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Menghapus akun pengguna dan semua data logbook secara permanen' })
+  @ApiOperation({
+    summary: 'Menghapus akun pengguna dan semua data logbook secara permanen',
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -64,9 +66,15 @@ export class UsersController {
       },
     },
   })
-  @ApiResponse({ status: 204, description: 'Akun dan data terkait berhasil dihapus' })
+  @ApiResponse({
+    status: 204,
+    description: 'Akun dan data terkait berhasil dihapus',
+  })
   @ApiResponse({ status: 400, description: 'Validasi konfirmasi gagal' })
-  @ApiResponse({ status: 401, description: 'Access token tidak valid atau kedaluwarsa' })
+  @ApiResponse({
+    status: 401,
+    description: 'Access token tidak valid atau kedaluwarsa',
+  })
   async deleteMe(
     @CurrentUser() user: CurrentUserData,
     @Body({ schema: deleteUserSchema }) _dto: DeleteUserDto,
@@ -82,4 +90,3 @@ export class UsersController {
     });
   }
 }
-

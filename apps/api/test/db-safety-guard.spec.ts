@@ -30,4 +30,3 @@ describe('assertLocalDatabaseOnly', () => {
     ).toThrow('[KESELAMATAN DATABASE TERLANGGAR]');
   });
 });
-

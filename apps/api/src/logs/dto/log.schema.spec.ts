@@ -100,7 +100,9 @@ describe('Log Schema', () => {
     });
 
     it('menerima pembaruan valid', () => {
-      const res = updateLogSchema.safeParse({ description: 'Update deskripsi' });
+      const res = updateLogSchema.safeParse({
+        description: 'Update deskripsi',
+      });
       expect(res.success).toBe(true);
     });
   });
@@ -140,4 +142,3 @@ describe('Log Schema', () => {
     });
   });
 });
-

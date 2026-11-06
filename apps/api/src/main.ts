@@ -21,9 +21,14 @@ async function bootstrap() {
     }),
   );
 
-  const trustProxy = process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) : 0;
+  const trustProxy = process.env.TRUST_PROXY
+    ? Number(process.env.TRUST_PROXY)
+    : 0;
   if (trustProxy > 0) {
-    (app.getHttpAdapter().getInstance() as Express).set('trust proxy', trustProxy);
+    (app.getHttpAdapter().getInstance() as Express).set(
+      'trust proxy',
+      trustProxy,
+    );
   }
 
   const corsOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:5173';

@@ -23,7 +23,10 @@ export interface StorageProvider {
   /**
    * Mengunggah file ke dalam folder DayDone pengguna di Drive.
    */
-  upload(userId: string, input: StorageUploadInput): Promise<StorageUploadResult>;
+  upload(
+    userId: string,
+    input: StorageUploadInput,
+  ): Promise<StorageUploadResult>;
 
   /**
    * Mengambil file dari Drive sebagai Node.js Readable stream untuk streaming HTTP.
@@ -35,4 +38,3 @@ export interface StorageProvider {
    */
   trash(userId: string, driveFileId: string): Promise<void>;
 }
-

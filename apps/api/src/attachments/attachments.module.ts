@@ -8,12 +8,7 @@ import { SignedUrlService } from './signed-url.service.js';
 @Module({
   imports: [StorageModule],
   controllers: [AttachmentsController],
-  providers: [
-    AttachmentsService,
-    ImageProcessorService,
-    SignedUrlService,
-  ],
+  providers: [AttachmentsService, ImageProcessorService, SignedUrlService],
   exports: [AttachmentsService, SignedUrlService],
 })
 export class AttachmentsModule {}
-

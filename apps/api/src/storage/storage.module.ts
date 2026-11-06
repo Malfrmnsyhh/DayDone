@@ -14,4 +14,3 @@ import { STORAGE_PROVIDER } from './storage.interface.js';
   exports: [STORAGE_PROVIDER, GoogleDriveStorage],
 })
 export class StorageModule {}
-

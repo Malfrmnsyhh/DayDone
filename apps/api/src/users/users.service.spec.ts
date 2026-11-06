@@ -56,7 +56,9 @@ describe('UsersService', () => {
 
     await service.deleteMe('user-1');
 
-    expect(mockEncryptionService.decrypt).toHaveBeenCalledWith('v1.encrypted.token');
+    expect(mockEncryptionService.decrypt).toHaveBeenCalledWith(
+      'v1.encrypted.token',
+    );
     expect(mockRevokeToken).toHaveBeenCalledWith('decrypted-token');
     expect(mockPrisma.user.delete).toHaveBeenCalledWith({
       where: { id: 'user-1' },

@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drive, type drive_v3 } from '@googleapis/drive';
 import { OAuth2Client } from 'google-auth-library';
@@ -88,7 +93,9 @@ export class GoogleDriveStorage implements StorageProvider {
 
     const auth = new OAuth2Client({
       clientId: this.configService.getOrThrow<string>('GOOGLE_WEB_CLIENT_ID'),
-      clientSecret: this.configService.getOrThrow<string>('GOOGLE_WEB_CLIENT_SECRET'),
+      clientSecret: this.configService.getOrThrow<string>(
+        'GOOGLE_WEB_CLIENT_SECRET',
+      ),
     });
 
     auth.setCredentials({ refresh_token: decryptedRefreshToken });
@@ -111,10 +118,13 @@ export class GoogleDriveStorage implements StorageProvider {
         return await fn();
       } catch (err: unknown) {
         const error = err as Record<string, unknown>;
-        const status = (error.status ?? (error.response as Record<string, unknown>)?.status) as number | undefined;
+        const status = (error.status ??
+          (error.response as Record<string, unknown>)?.status) as
+          number | undefined;
 
         const isRetryable =
-          status === 429 || (typeof status === 'number' && status >= 500 && status < 600);
+          status === 429 ||
+          (typeof status === 'number' && status >= 500 && status < 600);
 
         if (isRetryable && attempt < maxRetries) {
           const delayMs = 200 * Math.pow(2, attempt);
@@ -138,9 +148,12 @@ export class GoogleDriveStorage implements StorageProvider {
     }
 
     const error = err as Record<string, unknown>;
-    const status = (error.status ?? (error.response as Record<string, unknown>)?.status) as number | undefined;
+    const status = (error.status ??
+      (error.response as Record<string, unknown>)?.status) as
+      number | undefined;
     const message = typeof error.message === 'string' ? error.message : '';
-    const responseData = (error.response as Record<string, unknown>)?.data as Record<string, unknown> | undefined;
+    const responseData = (error.response as Record<string, unknown>)?.data as
+      Record<string, unknown> | undefined;
     const errorData = (responseData?.error as Record<string, unknown>) || {};
     const errorCodeString =
       typeof errorData.error === 'string'
@@ -157,7 +170,9 @@ export class GoogleDriveStorage implements StorageProvider {
       errorCodeString === 'invalid_grant' ||
       errorDataMessage.includes('invalid_grant')
     ) {
-      this.logger.warn(`Google Drive invalid_grant untuk user ${userId}, menandai NEEDS_RECONNECT`);
+      this.logger.warn(
+        `Google Drive invalid_grant untuk user ${userId}, menandai NEEDS_RECONNECT`,
+      );
 
       await this.prisma.user.update({
         where: { id: userId },
@@ -179,7 +194,9 @@ export class GoogleDriveStorage implements StorageProvider {
     const isQuotaExceeded =
       status === 403 &&
       Array.isArray(errorsList) &&
-      errorsList.some((e: Record<string, unknown>) => e.reason === 'storageQuotaExceeded');
+      errorsList.some(
+        (e: Record<string, unknown>) => e.reason === 'storageQuotaExceeded',
+      );
 
     if (isQuotaExceeded || message.includes('storageQuotaExceeded')) {
       throw new DomainException(
@@ -191,11 +208,15 @@ export class GoogleDriveStorage implements StorageProvider {
 
     // 3. 404 Not Found
     if (status === 404) {
-      throw new NotFoundException('File atau folder tidak ditemukan di Google Drive');
+      throw new NotFoundException(
+        'File atau folder tidak ditemukan di Google Drive',
+      );
     }
 
     // 4. Default: 502 DRIVE_UNAVAILABLE
-    this.logger.error(`Error Google Drive tidak terduga untuk user ${userId}: ${message}`);
+    this.logger.error(
+      `Error Google Drive tidak terduga untuk user ${userId}: ${message}`,
+    );
     throw new DomainException(
       HttpStatus.BAD_GATEWAY,
       'Layanan Google Drive sementara tidak tersedia',
@@ -303,7 +324,10 @@ export class GoogleDriveStorage implements StorageProvider {
    * Bila folder DayDone mendapat 404 (dihapus pengguna di Google Drive),
    * otomatis dibuat ulang dan unggah diulangi sekali.
    */
-  async upload(userId: string, input: StorageUploadInput): Promise<StorageUploadResult> {
+  async upload(
+    userId: string,
+    input: StorageUploadInput,
+  ): Promise<StorageUploadResult> {
     try {
       let folderId = await this.ensureAppFolder(userId);
       const { drive: driveClient } = await this.getDriveClient(userId);
@@ -329,11 +353,15 @@ export class GoogleDriveStorage implements StorageProvider {
         res = await doUpload(folderId);
       } catch (uploadErr: unknown) {
         const error = uploadErr as Record<string, unknown>;
-        const status = (error.status ?? (error.response as Record<string, unknown>)?.status) as number | undefined;
+        const status = (error.status ??
+          (error.response as Record<string, unknown>)?.status) as
+          number | undefined;
 
         // Folder 404 di Drive -> buat ulang folder lalu ulangi sekali
         if (status === 404) {
-          this.logger.warn(`Folder Drive ${folderId} hilang (404), membuat ulang untuk user ${userId}`);
+          this.logger.warn(
+            `Folder Drive ${folderId} hilang (404), membuat ulang untuk user ${userId}`,
+          );
           await this.prisma.user.update({
             where: { id: userId },
             data: { driveFolderId: null },
@@ -397,7 +425,9 @@ export class GoogleDriveStorage implements StorageProvider {
       );
     } catch (err: unknown) {
       const error = err as Record<string, unknown>;
-      const status = (error.status ?? (error.response as Record<string, unknown>)?.status) as number | undefined;
+      const status = (error.status ??
+        (error.response as Record<string, unknown>)?.status) as
+        number | undefined;
 
       // Bila file sudah 404 di Drive, tidak perlu lempar error
       if (status === 404) {
@@ -413,4 +443,3 @@ export class GoogleDriveStorage implements StorageProvider {
     }
   }
 }
-

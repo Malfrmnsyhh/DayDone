@@ -108,7 +108,10 @@ export class InMemoryStorageProvider implements StorageProvider {
     return folderId;
   }
 
-  async upload(userId: string, input: StorageUploadInput): Promise<StorageUploadResult> {
+  async upload(
+    userId: string,
+    input: StorageUploadInput,
+  ): Promise<StorageUploadResult> {
     this.checkSimulatedErrors(userId);
 
     // Cek simulasi folder 404 (misal folder dihapus user di Google Drive)
@@ -118,7 +121,7 @@ export class InMemoryStorageProvider implements StorageProvider {
       // Hapus folder yang tersimpan agar upload berikutnya memicu pembuatan ulang
       this.userFolders.delete(userId);
       const notFoundError = new Error('File not found: folder');
-      ((notFoundError as unknown) as Record<string, unknown>).status = 404;
+      (notFoundError as unknown as Record<string, unknown>).status = 404;
       throw notFoundError;
     }
 
@@ -187,4 +190,3 @@ export class InMemoryStorageProvider implements StorageProvider {
     }
   }
 }
-

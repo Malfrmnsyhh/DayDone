@@ -32,13 +32,15 @@ describe('Logger Configuration & Redaction (createPinoHttpConfig)', () => {
       setHeader: setHeaderSpy,
     } as unknown as ServerResponse;
 
-    const reqId = (config.genReqId as (req: IncomingMessage, res: ServerResponse) => string)(
-      mockReq,
-      mockRes,
-    );
+    const reqId = (
+      config.genReqId as (req: IncomingMessage, res: ServerResponse) => string
+    )(mockReq, mockRes);
 
     expect(reqId).toBe('custom-req-trace-123');
-    expect(setHeaderSpy).toHaveBeenCalledWith('X-Request-Id', 'custom-req-trace-123');
+    expect(setHeaderSpy).toHaveBeenCalledWith(
+      'X-Request-Id',
+      'custom-req-trace-123',
+    );
   });
 
   it('genReqId menghasilkan UUID v4 baru jika header X-Request-Id kosong', () => {
@@ -51,10 +53,9 @@ describe('Logger Configuration & Redaction (createPinoHttpConfig)', () => {
       setHeader: setHeaderSpy,
     } as unknown as ServerResponse;
 
-    const reqId = (config.genReqId as (req: IncomingMessage, res: ServerResponse) => string)(
-      mockReq,
-      mockRes,
-    );
+    const reqId = (
+      config.genReqId as (req: IncomingMessage, res: ServerResponse) => string
+    )(mockReq, mockRes);
 
     expect(reqId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -93,7 +94,10 @@ describe('Logger Configuration & Redaction (createPinoHttpConfig)', () => {
     const mockRes = new MockResponse();
     mockRes.setHeader('set-cookie', 'daydone_rt=new-secret-cookie; HttpOnly');
 
-    httpLogger(mockReq as unknown as IncomingMessage, mockRes as unknown as ServerResponse);
+    httpLogger(
+      mockReq as unknown as IncomingMessage,
+      mockRes as unknown as ServerResponse,
+    );
     httpLogger.logger.info({ req: mockReq, res: mockRes }, 'test request');
 
     const logOutput = logs.join('');
@@ -140,7 +144,10 @@ describe('Logger Configuration & Redaction (createPinoHttpConfig)', () => {
 
     const mockRes = new MockResponse();
 
-    httpLogger(mockReq as unknown as IncomingMessage, mockRes as unknown as ServerResponse);
+    httpLogger(
+      mockReq as unknown as IncomingMessage,
+      mockRes as unknown as ServerResponse,
+    );
     httpLogger.logger.info({ req: mockReq }, 'test auth payload');
 
     const logOutput = logs.join('');
@@ -182,7 +189,10 @@ describe('Logger Configuration & Redaction (createPinoHttpConfig)', () => {
 
     const mockRes = new MockResponse();
 
-    httpLogger(mockReq as unknown as IncomingMessage, mockRes as unknown as ServerResponse);
+    httpLogger(
+      mockReq as unknown as IncomingMessage,
+      mockRes as unknown as ServerResponse,
+    );
     httpLogger.logger.info({ req: mockReq }, 'test attachment url');
 
     const logOutput = logs.join('');

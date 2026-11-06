@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { EncryptionService } from '../common/crypto/encryption.service.js';
@@ -45,10 +40,7 @@ export class AuthService {
     @Inject(STORAGE_PROVIDER)
     private readonly storageProvider: StorageProvider,
   ) {
-    this.jwtAccessTtl = this.configService.get<string>(
-      'JWT_ACCESS_TTL',
-      '15m',
-    );
+    this.jwtAccessTtl = this.configService.get<string>('JWT_ACCESS_TTL', '15m');
   }
 
   /**
@@ -111,7 +103,11 @@ export class AuthService {
     });
 
     // Buat folder aplikasi DayDone di Drive secara best-effort bila Drive terhubung
-    if (googleProfile.driveGranted && driveStatus === DriveStatus.CONNECTED && !user.driveFolderId) {
+    if (
+      googleProfile.driveGranted &&
+      driveStatus === DriveStatus.CONNECTED &&
+      !user.driveFolderId
+    ) {
       try {
         await this.storageProvider.ensureAppFolder(user.id);
       } catch (err: unknown) {
@@ -216,4 +212,3 @@ export class AuthService {
     };
   }
 }
-

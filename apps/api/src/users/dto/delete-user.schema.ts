@@ -1,4 +1,1 @@
-export {
-  deleteUserSchema,
-  type DeleteUserDto,
-} from '@daydone/shared';
+export { deleteUserSchema, type DeleteUserDto } from '@daydone/shared';

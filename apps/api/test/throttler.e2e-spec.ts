@@ -126,4 +126,3 @@ describe('Throttler Rate Limiting & HTTP Security (e2e)', () => {
     expect(allowedResB.status).not.toBe(429);
   });
 });
-

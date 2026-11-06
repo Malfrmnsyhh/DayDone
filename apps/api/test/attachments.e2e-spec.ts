@@ -231,7 +231,10 @@ describe('Attachments & Storage Integration (e2e)', () => {
       const logConcurrentRes = await request(app.getHttpServer())
         .post('/api/v1/logs')
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ date: '2026-10-24', description: 'Log untuk konkurensi upload' });
+        .send({
+          date: '2026-10-24',
+          description: 'Log untuk konkurensi upload',
+        });
       const concurrentLogId = logConcurrentRes.body.id;
 
       // Jalankan 2 request upload paralel secara simultan (masing-masing kirim 3 file, total 6 > 5)
@@ -450,4 +453,3 @@ describe('Attachments & Storage Integration (e2e)', () => {
     });
   });
 });
-

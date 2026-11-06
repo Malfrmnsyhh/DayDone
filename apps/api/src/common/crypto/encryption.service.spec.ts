@@ -73,4 +73,3 @@ describe('EncryptionService', () => {
     expect(() => serviceB.decrypt(encryptedWithA)).toThrow();
   });
 });
-

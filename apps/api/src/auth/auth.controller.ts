@@ -89,15 +89,23 @@ export class AuthController {
   @Public()
   @Post('google')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Menukar authorization code Google dengan sesi DayDone' })
+  @ApiOperation({
+    summary: 'Menukar authorization code Google dengan sesi DayDone',
+  })
   @ApiBody({
     schema: {
       type: 'object',
       required: ['code', 'platform'],
       properties: {
-        code: { type: 'string', description: 'Authorization code dari Google OAuth' },
+        code: {
+          type: 'string',
+          description: 'Authorization code dari Google OAuth',
+        },
         platform: { type: 'string', enum: ['WEB', 'MOBILE'] },
-        redirectUri: { type: 'string', description: 'Redirect URI (opsional / postmessage)' },
+        redirectUri: {
+          type: 'string',
+          description: 'Redirect URI (opsional / postmessage)',
+        },
       },
     },
   })
@@ -109,7 +117,10 @@ export class AuthController {
       properties: {
         accessToken: { type: 'string' },
         accessTokenExpiresAt: { type: 'string', format: 'date-time' },
-        refreshToken: { type: 'string', description: 'Hanya dikembalikan pada platform MOBILE' },
+        refreshToken: {
+          type: 'string',
+          description: 'Hanya dikembalikan pada platform MOBILE',
+        },
         user: {
           type: 'object',
           properties: {
@@ -117,14 +128,21 @@ export class AuthController {
             email: { type: 'string', format: 'email' },
             name: { type: 'string' },
             avatarUrl: { type: 'string', nullable: true },
-            driveStatus: { type: 'string', enum: ['NOT_CONNECTED', 'CONNECTED', 'NEEDS_RECONNECT'] },
+            driveStatus: {
+              type: 'string',
+              enum: ['NOT_CONNECTED', 'CONNECTED', 'NEEDS_RECONNECT'],
+            },
           },
         },
       },
     },
   })
   @ApiResponse({ status: 400, description: 'Body request tidak valid' })
-  @ApiResponse({ status: 401, description: 'Kode otorisasi Google tidak valid atau kedaluwarsa (GOOGLE_AUTH_FAILED)' })
+  @ApiResponse({
+    status: 401,
+    description:
+      'Kode otorisasi Google tidak valid atau kedaluwarsa (GOOGLE_AUTH_FAILED)',
+  })
   async googleLogin(
     @Body({ schema: googleLoginSchema }) dto: GoogleLoginDto,
     @Headers('user-agent') userAgent: string | undefined,
@@ -133,7 +151,11 @@ export class AuthController {
     const result = await this.authService.googleLogin(dto, userAgent);
 
     if (dto.platform === 'WEB') {
-      res.cookie('daydone_rt', result.rawSessionRefreshToken, this.getCookieOptions());
+      res.cookie(
+        'daydone_rt',
+        result.rawSessionRefreshToken,
+        this.getCookieOptions(),
+      );
 
       return {
         accessToken: result.accessToken,
@@ -153,11 +175,14 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Memperbarui access token sesi melalui rotasi refresh token' })
+  @ApiOperation({
+    summary: 'Memperbarui access token sesi melalui rotasi refresh token',
+  })
   @ApiHeader({
     name: 'X-Requested-With',
     required: false,
-    description: 'Wajib bernilai daydone-web jika meminta refresh sesi berbasis cookie web',
+    description:
+      'Wajib bernilai daydone-web jika meminta refresh sesi berbasis cookie web',
   })
   @ApiCookieAuth('daydone_rt')
   @ApiBody({
@@ -165,7 +190,10 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        refreshToken: { type: 'string', description: 'Refresh token (khusus platform MOBILE)' },
+        refreshToken: {
+          type: 'string',
+          description: 'Refresh token (khusus platform MOBILE)',
+        },
       },
     },
   })
@@ -177,12 +205,21 @@ export class AuthController {
       properties: {
         accessToken: { type: 'string' },
         accessTokenExpiresAt: { type: 'string', format: 'date-time' },
-        refreshToken: { type: 'string', description: 'Refresh token baru (khusus MOBILE)' },
+        refreshToken: {
+          type: 'string',
+          description: 'Refresh token baru (khusus MOBILE)',
+        },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Refresh token tidak valid atau kedaluwarsa (SESSION_EXPIRED)' })
-  @ApiResponse({ status: 403, description: 'Header X-Requested-With tidak valid untuk web' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token tidak valid atau kedaluwarsa (SESSION_EXPIRED)',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Header X-Requested-With tidak valid untuk web',
+  })
   async refresh(
     @Body({ schema: refreshTokenSchema }) dto: RefreshTokenDto,
     @Headers('user-agent') userAgent: string | undefined,
@@ -211,7 +248,11 @@ export class AuthController {
       const result = await this.authService.refresh(cookieToken, userAgent);
 
       // Rotasi cookie refresh token dengan opsi yang persis sama
-      res.cookie('daydone_rt', result.rawSessionRefreshToken, this.getCookieOptions());
+      res.cookie(
+        'daydone_rt',
+        result.rawSessionRefreshToken,
+        this.getCookieOptions(),
+      );
 
       return {
         accessToken: result.accessToken,
@@ -252,12 +293,18 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        refreshToken: { type: 'string', description: 'Refresh token (khusus MOBILE)' },
+        refreshToken: {
+          type: 'string',
+          description: 'Refresh token (khusus MOBILE)',
+        },
       },
     },
   })
   @ApiResponse({ status: 204, description: 'Sesi berhasil dicabut' })
-  @ApiResponse({ status: 403, description: 'Header X-Requested-With tidak valid untuk web' })
+  @ApiResponse({
+    status: 403,
+    description: 'Header X-Requested-With tidak valid untuk web',
+  })
   async logout(
     @Body({ schema: logoutSchema }) dto: LogoutDto,
     @Headers('x-requested-with') xRequestedWith: string | undefined,
@@ -288,7 +335,9 @@ export class AuthController {
 
   @Get('me')
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Mengambil profil dan status Google Drive user saat ini' })
+  @ApiOperation({
+    summary: 'Mengambil profil dan status Google Drive user saat ini',
+  })
   @ApiResponse({
     status: 200,
     description: 'Profil pengguna',
@@ -299,11 +348,17 @@ export class AuthController {
         email: { type: 'string', format: 'email' },
         name: { type: 'string' },
         avatarUrl: { type: 'string', nullable: true },
-        driveStatus: { type: 'string', enum: ['NOT_CONNECTED', 'CONNECTED', 'NEEDS_RECONNECT'] },
+        driveStatus: {
+          type: 'string',
+          enum: ['NOT_CONNECTED', 'CONNECTED', 'NEEDS_RECONNECT'],
+        },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Access token tidak valid atau kedaluwarsa' })
+  @ApiResponse({
+    status: 401,
+    description: 'Access token tidak valid atau kedaluwarsa',
+  })
   async getMe(
     @CurrentUser() user: CurrentUserData,
   ): Promise<UserProfileResponse> {

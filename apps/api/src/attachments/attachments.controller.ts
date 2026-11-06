@@ -38,7 +38,9 @@ export class AttachmentsController {
    */
   @Get(':id/url')
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Mendapatkan signed URL sementara (5 menit) untuk lampiran' })
+  @ApiOperation({
+    summary: 'Mendapatkan signed URL sementara (5 menit) untuk lampiran',
+  })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({
     status: 200,
@@ -53,7 +55,11 @@ export class AttachmentsController {
   })
   @ApiResponse({ status: 401, description: 'Access token tidak valid' })
   @ApiResponse({ status: 404, description: 'Lampiran tidak ditemukan' })
-  @ApiResponse({ status: 409, description: 'Google Drive perlu dihubungkan ulang (DRIVE_RECONNECT_REQUIRED)' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Google Drive perlu dihubungkan ulang (DRIVE_RECONNECT_REQUIRED)',
+  })
   async getAttachmentUrl(
     @CurrentUser() user: CurrentUserData,
     @Param('id', ParseUUIDPipe) id: string,
@@ -66,15 +72,31 @@ export class AttachmentsController {
    */
   @Public()
   @Get(':id/content')
-  @ApiOperation({ summary: 'Mengalirkan biner gambar dari Google Drive (dilindungi signed token HMAC)' })
+  @ApiOperation({
+    summary:
+      'Mengalirkan biner gambar dari Google Drive (dilindungi signed token HMAC)',
+  })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
-  @ApiQuery({ name: 'token', type: 'string', description: 'Token tanda tangan HMAC yang valid' })
+  @ApiQuery({
+    name: 'token',
+    type: 'string',
+    description: 'Token tanda tangan HMAC yang valid',
+  })
   @ApiProduces('image/jpeg', 'image/png')
   @ApiResponse({ status: 200, description: 'Aliran biner file gambar' })
-  @ApiResponse({ status: 401, description: 'Token tidak valid atau kedaluwarsa' })
-  @ApiResponse({ status: 404, description: 'Lampiran tidak ditemukan di database atau Drive' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token tidak valid atau kedaluwarsa',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lampiran tidak ditemukan di database atau Drive',
+  })
   @ApiResponse({ status: 409, description: 'DRIVE_RECONNECT_REQUIRED' })
-  @ApiResponse({ status: 502, description: 'Layanan Drive tidak dapat diakses (DRIVE_UNAVAILABLE)' })
+  @ApiResponse({
+    status: 502,
+    description: 'Layanan Drive tidak dapat diakses (DRIVE_UNAVAILABLE)',
+  })
   async getAttachmentContent(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('token') token: string,
@@ -110,4 +132,3 @@ export class AttachmentsController {
     await this.attachmentsService.deleteAttachment(user.userId, id);
   }
 }
-

@@ -130,7 +130,13 @@ describe('AuthController', () => {
       } as any;
 
       await expect(
-        controller.refresh({}, 'browser', undefined, req, res as unknown as Response),
+        controller.refresh(
+          {},
+          'browser',
+          undefined,
+          req,
+          res as unknown as Response,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -157,7 +163,12 @@ describe('AuthController', () => {
         cookies: { daydone_rt: 'cookie-to-delete' },
       } as any;
 
-      await controller.logout({}, 'daydone-web', req, res as unknown as Response);
+      await controller.logout(
+        {},
+        'daydone-web',
+        req,
+        res as unknown as Response,
+      );
 
       expect(res.clearCookie).toHaveBeenCalledWith(
         'daydone_rt',

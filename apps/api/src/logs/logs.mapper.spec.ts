@@ -67,8 +67,12 @@ describe('Logs Mapper', () => {
 
     const res = toLogResponse(multiAttLog, mockBuildUrl);
 
-    expect(res.attachments[0]?.url).toBe('https://api.daydone.local/attachments/att-1/content?token=abc');
-    expect(res.attachments[1]?.url).toBe('https://api.daydone.local/attachments/att-2/content?token=abc');
+    expect(res.attachments[0]?.url).toBe(
+      'https://api.daydone.local/attachments/att-1/content?token=abc',
+    );
+    expect(res.attachments[1]?.url).toBe(
+      'https://api.daydone.local/attachments/att-2/content?token=abc',
+    );
   });
 
   it('toLogListItemResponse hanya menyertakan URL untuk lampiran pertama (thumbnail), sisanya null', () => {
@@ -87,8 +91,9 @@ describe('Logs Mapper', () => {
 
     const res = toLogListItemResponse(multiAttLog, mockBuildUrl);
 
-    expect(res.attachments[0]?.url).toBe('https://api.daydone.local/attachments/att-1/content?token=abc');
+    expect(res.attachments[0]?.url).toBe(
+      'https://api.daydone.local/attachments/att-1/content?token=abc',
+    );
     expect(res.attachments[1]?.url).toBeNull();
   });
 });
-

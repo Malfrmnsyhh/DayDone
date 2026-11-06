@@ -3,7 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
 import { DomainException } from '../../common/errors/domain.exception.js';
 import { ErrorCode } from '../../common/errors/error-codes.js';
-import type { ClientPlatform, Session, User } from '../../generated/prisma/client.js';
+import type {
+  ClientPlatform,
+  Session,
+  User,
+} from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 export interface CreatedSessionResult {
@@ -196,7 +200,9 @@ export class SessionsService {
    * Memvalidasi apakah sesi aktif dan belum dicabut untuk JwtAuthGuard.
    * Juga memastikan relasi user pemilik akun masih ada di database.
    */
-  async validateSession(sessionId: string): Promise<(Session & { user: User }) | null> {
+  async validateSession(
+    sessionId: string,
+  ): Promise<(Session & { user: User }) | null> {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: { user: true },

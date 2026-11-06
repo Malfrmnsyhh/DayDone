@@ -18,10 +18,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
-  catch(
-    exception: Prisma.PrismaClientKnownRequestError,
-    host: ArgumentsHost,
-  ) {
+  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
@@ -53,4 +50,3 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     }
   }
 }
-

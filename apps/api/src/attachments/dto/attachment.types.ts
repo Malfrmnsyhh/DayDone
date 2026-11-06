@@ -14,4 +14,3 @@ export interface AttachmentUrlResponse {
   url: string;
   expiresAt: string;
 }
-

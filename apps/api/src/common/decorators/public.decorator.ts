@@ -7,4 +7,3 @@ export const IS_PUBLIC_KEY = 'isPublic';
  * (seperti /health).
  */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
-

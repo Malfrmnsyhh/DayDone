@@ -66,7 +66,9 @@ describe('InMemoryStorageProvider', () => {
   it('mensimulasikan DRIVE_RECONNECT_REQUIRED saat flag aktif', async () => {
     provider.setSimulateReconnectRequired('user-1', true);
 
-    await expect(provider.ensureAppFolder('user-1')).rejects.toThrow(DomainException);
+    await expect(provider.ensureAppFolder('user-1')).rejects.toThrow(
+      DomainException,
+    );
     try {
       await provider.ensureAppFolder('user-1');
     } catch (err: any) {
@@ -86,4 +88,3 @@ describe('InMemoryStorageProvider', () => {
     ).rejects.toThrow(DomainException);
   });
 });
-

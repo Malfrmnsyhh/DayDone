@@ -64,4 +64,3 @@ export class EncryptionService {
     return decrypted.toString('utf8');
   }
 }
-

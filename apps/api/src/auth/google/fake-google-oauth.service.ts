@@ -93,4 +93,3 @@ export class FakeGoogleOAuthService implements GoogleOAuthService {
     return scenario;
   }
 }
-

@@ -167,7 +167,9 @@ export class AttachmentsService {
         `Unggah lampiran gagal di tengah jalan untuk log ${logId}, membatalkan ${uploadedRecords.length} file di Drive`,
       );
       await Promise.allSettled(
-        uploadedRecords.map((r) => this.storageProvider.trash(userId, r.fileId)),
+        uploadedRecords.map((r) =>
+          this.storageProvider.trash(userId, r.fileId),
+        ),
       );
       throw uploadError;
     }
@@ -247,7 +249,9 @@ export class AttachmentsService {
         `Insert DB lampiran gagal untuk log ${logId}, melakukan kompensasi trash file di Drive`,
       );
       await Promise.allSettled(
-        uploadedRecords.map((r) => this.storageProvider.trash(userId, r.fileId)),
+        uploadedRecords.map((r) =>
+          this.storageProvider.trash(userId, r.fileId),
+        ),
       );
       throw dbError;
     }
@@ -423,4 +427,3 @@ export class AttachmentsService {
     };
   }
 }
-
