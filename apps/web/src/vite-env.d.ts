@@ -9,3 +9,21 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+interface Window {
+  google?: {
+    accounts: {
+      oauth2: {
+        initCodeClient: (config: {
+          client_id: string;
+          scope: string;
+          ux_mode?: 'popup' | 'redirect';
+          prompt?: string;
+          callback: (response: { code?: string; error?: string }) => void;
+          error_callback?: (error: unknown) => void;
+        }) => {
+          requestCode: () => void;
+        };
+      };
+    };
+  };
+}

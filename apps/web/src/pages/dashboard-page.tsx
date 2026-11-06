@@ -8,6 +8,7 @@ import { LogCard } from '../components/dashboard/log-card.js';
 import { LogFilterBar } from '../components/dashboard/log-filter-bar.js';
 import { Pagination } from '../components/dashboard/pagination.js';
 import { TodayCard } from '../components/dashboard/today-card.js';
+import { DriveBanner } from '../components/drive/drive-banner.js';
 
 export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +45,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Banner Notifikasi Google Drive */}
+      <DriveBanner />
+
       {/* Kartu Hari Ini */}
       <TodayCard />
 

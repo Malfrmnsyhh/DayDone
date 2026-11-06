@@ -2,26 +2,6 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from './auth-context.js';
 
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initCodeClient: (config: {
-            client_id: string;
-            scope: string;
-            ux_mode?: 'popup' | 'redirect';
-            callback: (response: { code?: string; error?: string }) => void;
-            error_callback?: (error: unknown) => void;
-          }) => {
-            requestCode: () => void;
-          };
-        };
-      };
-    };
-  }
-}
-
 export function GoogleLoginButton() {
   const { loginWithCode } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);

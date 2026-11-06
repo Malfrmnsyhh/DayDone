@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/dashboard-page.js';
 import { LogDetailPage } from './pages/log-detail-page.js';
 import { LogFormPage } from './pages/log-form-page.js';
 import { LoginPage } from './pages/login-page.js';
+import { SettingsPage } from './pages/settings-page.js';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: '/logs/new', element: <LogFormPage /> },
           { path: '/logs/:id', element: <LogDetailPage /> },
           { path: '/logs/:id/edit', element: <LogFormPage /> },
+          { path: '/settings', element: <SettingsPage /> },
         ],
       },
     ],
