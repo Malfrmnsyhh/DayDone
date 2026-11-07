@@ -273,6 +273,11 @@ export function SettingsPage() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-account-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleteUserMutation.isPending) {
+              setIsDeleteModalOpen(false);
+            }
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-2xs"
         >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200 space-y-4">
@@ -300,8 +305,22 @@ export function SettingsPage() {
                 id="confirm-input"
                 type="text"
                 autoComplete="off"
+                autoFocus
                 value={confirmInput}
                 onChange={(e) => setConfirmInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    confirmInput.trim() === 'HAPUS' &&
+                    !deleteUserMutation.isPending
+                  ) {
+                    e.preventDefault();
+                    handleDeleteAccount();
+                  } else if (e.key === 'Escape' && !deleteUserMutation.isPending) {
+                    e.preventDefault();
+                    setIsDeleteModalOpen(false);
+                  }
+                }}
                 placeholder="HAPUS"
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono tracking-wider focus:border-red-500 focus:outline-hidden focus:ring-2 focus:ring-red-200"
               />

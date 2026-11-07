@@ -12,7 +12,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { uploadAttachmentXHR } from '../../api/attachments.js';
 
 export interface PhotoUploadDropzoneProps {
@@ -46,6 +46,13 @@ export function PhotoUploadDropzone({
   const [queue, setQueue] = useState<FileQueueItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  // Bersihkan Object URL preview saat komponen di-unmount untuk mencegah memory leak
+  useEffect(() => {
+    return () => {
+      queue.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, [queue]);
 
   const remainingSlots = Math.max(0, MAX_ATTACHMENTS - currentAttachmentCount);
   const isDriveReady = driveStatus === 'CONNECTED';

@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 6 November 2026 (penyelesaian Milestone M7 - Fase C)
+**Terakhir diperbarui:** 7 November 2026 (penyempurnaan UX web & favicon)
 
 ## Status per milestone
 
@@ -248,6 +248,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-06 — Pengunggahan foto berurutan (sequential) via XHR — mengeksekusi unggahan file dalam antrean satu demi satu untuk menjamin kestabilan koneksi, pelacakan progress akurat per file (0–100%), dan menghindari kegagalan upload paralel di browser.
 - 2026-11-06 — Fail-Safe Signed URL kedaluwarsa — mengombinasikan `staleTime: 4 menit` pada TanStack Query (< masa berlaku token 5 menit) dengan handler `onError` pada elemen `<img>` yang otomatis me-refetch detail logbook sekali per ID lampiran untuk memperbarui token URL yang hangus tanpa reload halaman.
 - 2026-11-06 — Validasi teks konfirmasi hapus akun ketat — mewajibkan pengguna mengetik kata `"HAPUS"` huruf kapital persis di modal dialog sebelum tombol eksekusi mutasi `DELETE /users/me` dapat diaktifkan.
+- 2026-11-07 — Peningkatan UX Lightbox, Favicon & Pembersihan Memory Leak Dropzone — penambahan favicon SVG brand DayDone, listener Escape/navigasi panah global pada window untuk lightbox, fitur klik backdrop untuk menutup modal, serta pembersihan URL.revokeObjectURL otomatis pada Dropzone saat unmount.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 

@@ -66,10 +66,8 @@ describe('PhotoGallery Component', () => {
     fireEvent.click(nextBtn);
     expect(screen.getByText('Foto 2 dari 2')).toBeInTheDocument();
 
-    // Tekan tombol Escape untuk menutup
+    // Tekan tombol Escape untuk menutup langsung dari window
     fireEvent.keyDown(window, { key: 'Escape' });
-    const closeBtn = screen.getByLabelText('Tutup penampil foto');
-    fireEvent.click(closeBtn);
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

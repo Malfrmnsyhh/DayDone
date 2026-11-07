@@ -33,27 +33,27 @@ export function PhotoLightbox({
     // Fokus ke modal untuk aksesibilitas keyboard
     modalRef.current?.focus();
 
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowLeft') {
+        onNavigate((currentIndex - 1 + total) % total);
+      } else if (e.key === 'ArrowRight') {
+        onNavigate((currentIndex + 1) % total);
+      }
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+
     return () => {
       document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleWindowKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, currentIndex, total, onClose, onNavigate]);
 
   if (!isOpen || !current || total === 0) {
     return null;
   }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      onClose();
-    } else if (e.key === 'ArrowLeft') {
-      e.stopPropagation();
-      handlePrev();
-    } else if (e.key === 'ArrowRight') {
-      e.stopPropagation();
-      handleNext();
-    }
-  };
 
   const handlePrev = () => {
     const nextIdx = (currentIndex - 1 + total) % total;
@@ -72,7 +72,11 @@ export function PhotoLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Penampil foto layar penuh"
-      onKeyDown={handleKeyDown}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/95 p-4 text-white backdrop-blur-xs select-none focus:outline-hidden"
     >
       {/* Header Lightbox: Nomor urut foto & tombol tutup */}
@@ -91,7 +95,14 @@ export function PhotoLightbox({
       </div>
 
       {/* Konten Gambar Tengah */}
-      <div className="relative flex flex-1 w-full items-center justify-center overflow-hidden px-2 sm:px-12">
+      <div
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+        className="relative flex flex-1 w-full items-center justify-center overflow-hidden px-2 sm:px-12"
+      >
         {total > 1 && (
           <button
             type="button"
@@ -108,7 +119,8 @@ export function PhotoLightbox({
           src={current.url || ''}
           alt={current.fileName}
           referrerPolicy="no-referrer"
-          className="max-h-[80vh] max-w-[92vw] sm:max-w-[85vw] object-contain rounded-lg shadow-2xl transition-transform duration-200"
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-[80vh] max-w-[92vw] sm:max-w-[85vw] object-contain rounded-lg shadow-2xl transition-transform duration-200 cursor-default"
         />
 
         {total > 1 && (

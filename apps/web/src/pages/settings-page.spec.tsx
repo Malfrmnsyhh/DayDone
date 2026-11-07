@@ -78,5 +78,23 @@ describe('SettingsPage Component', () => {
       expect(deletedMe).toBe(true);
     });
   });
+
+  it('dapat menutup modal konfirmasi hapus akun dengan tombol Escape', () => {
+    render(
+      <TestWrapper>
+        <SettingsPage />
+      </TestWrapper>,
+    );
+
+    const openModalBtn = screen.getByRole('button', { name: /Hapus Akun Saya/i });
+    fireEvent.click(openModalBtn);
+
+    expect(screen.getByText('Konfirmasi Hapus Akun')).toBeInTheDocument();
+    const confirmInput = screen.getByPlaceholderText('HAPUS');
+
+    fireEvent.keyDown(confirmInput, { key: 'Escape' });
+
+    expect(screen.queryByText('Konfirmasi Hapus Akun')).not.toBeInTheDocument();
+  });
 });
 
