@@ -1,10 +1,17 @@
 import { LogOut, Settings } from 'lucide-react';
-import { Link, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/auth-context.js';
 import { UserAvatar } from '../user-avatar.js';
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+
+  // Scroll ke atas halaman saat rute berpindah
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   const getDriveBadge = (status?: string) => {
     switch (status) {
@@ -31,6 +38,14 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      {/* Tautan Aksesibilitas: Lewati ke konten utama */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-xs focus:font-semibold focus:text-white focus:shadow-md focus:outline-hidden"
+      >
+        Lewati ke konten utama
+      </a>
+
       {/* Sticky Header */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
@@ -92,9 +107,21 @@ export function AppLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-5xl w-full flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main id="main-content" className="mx-auto max-w-5xl w-full flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-4 sm:flex-row sm:px-6">
+          <p>
+            DayDone &copy; {new Date().getFullYear()} &mdash; Logbook Magang Harian
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Foto tersimpan privat di Google Drive pribadi Anda
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

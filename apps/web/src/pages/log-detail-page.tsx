@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
   Calendar,
+  Check,
+  Copy,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -23,9 +25,21 @@ export function LogDetailPage() {
   const { user } = useAuth();
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const { data: log, isLoading, isError, error, refetch } = useLogDetail(id);
   const deleteMutation = useDeleteLog();
+
+  const handleCopyDescription = async () => {
+    if (!log?.description) return;
+    try {
+      await navigator.clipboard.writeText(log.description);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Abaikan bila clipboard API dicegah browser
+    }
+  };
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -119,9 +133,29 @@ export function LogDetailPage() {
 
         {/* Deskripsi Kegiatan (Plain Text dengan whitespace-pre-wrap, TANPA dangerouslySetInnerHTML) */}
         <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            Catatan Aktivitas Magang
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Catatan Aktivitas Magang
+            </h2>
+            <button
+              type="button"
+              onClick={handleCopyDescription}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-2xs hover:bg-slate-50 hover:text-indigo-600 transition"
+              title="Salin deskripsi logbook ke papan klip"
+            >
+              {isCopied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-600 font-semibold">Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>Salin Teks</span>
+                </>
+              )}
+            </button>
+          </div>
           <div className="rounded-xl bg-slate-50/70 p-4 sm:p-5 border border-slate-100">
             <p className="whitespace-pre-wrap font-sans text-sm text-slate-800 leading-relaxed break-words">
               {log.description}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface UserAvatarProps {
   name?: string | null;
@@ -23,6 +23,11 @@ export function UserAvatar({
   sizeClassName = 'h-8 w-8 text-xs',
 }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
+
+  // Reset status error bila URL avatar berubah
+  useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
 
   if (avatarUrl && !imageError) {
     return (

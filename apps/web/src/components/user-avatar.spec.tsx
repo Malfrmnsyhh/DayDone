@@ -50,5 +50,33 @@ describe('UserAvatar Component', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByText('AD')).toBeInTheDocument();
   });
+
+  it('me-reset status error gambar saat prop avatarUrl berubah', () => {
+    const { rerender } = render(
+      <UserAvatar
+        name="John Doe"
+        avatarUrl="https://broken-image-link.com/404.jpg"
+      />,
+    );
+
+    const img = screen.getByRole('img');
+    fireEvent.error(img);
+
+    expect(screen.getByText('JD')).toBeInTheDocument();
+
+    // Rerender dengan URL baru yang valid
+    rerender(
+      <UserAvatar
+        name="John Doe"
+        avatarUrl="https://fresh-image-link.com/avatar.jpg"
+      />,
+    );
+
+    // img dicoba render ulang
+    expect(screen.getByRole('img')).toHaveAttribute(
+      'src',
+      'https://fresh-image-link.com/avatar.jpg',
+    );
+  });
 });
 

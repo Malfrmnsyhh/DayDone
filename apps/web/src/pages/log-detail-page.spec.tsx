@@ -137,4 +137,47 @@ describe('LogDetailPage Component', () => {
       expect(deleted).toBe(true);
     });
   });
+
+  it('dapat menyalin deskripsi kegiatan ke clipboard saat tombol Salin diklik', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'log-copy-test',
+        date: '2026-11-05',
+        description: 'Catatan penting untuk disalin ke laporan',
+        attachments: [],
+        createdAt: '2026-11-05T00:00:00.000Z',
+        updatedAt: '2026-11-05T00:00:00.000Z',
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <TestWrapper initialEntries={['/logs/log-copy-test']} routePath="/logs/:id">
+        <LogDetailPage />
+      </TestWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Catatan penting untuk disalin ke laporan'),
+      ).toBeInTheDocument();
+    });
+
+    const copyBtn = screen.getByRole('button', { name: /Salin Teks/i });
+    fireEvent.click(copyBtn);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith('Catatan penting untuk disalin ke laporan');
+      expect(screen.getByText('Tersalin!')).toBeInTheDocument();
+    });
+  });
 });
