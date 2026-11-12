@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 8 November 2026 (penyempurnaan aksesibilitas, navigasi scroll, & salin catatan)
+**Terakhir diperbarui:** 12 November 2026 (persiapan rilis produksi M9, konfigurasi SPA Vercel, optimasi chunking, & validasi cookie lintas domain)
 
 ## Status per milestone
 
@@ -190,6 +190,13 @@
   - Hapus foto dengan modal konfirmasi & file otomatis dipindahkan ke Google Drive Trash: OK
   - Banner peringatan status Google Drive & Halaman Pengaturan (`/settings`) dengan dialog konfirmasi ketik "HAPUS": OK
 
+### Persiapan Rilis M9 (Produksi)
+- [x] Konfigurasi SPA fallback rewrite di [apps/web/vercel.json](file:///D:/website/DayDone/apps/web/vercel.json) (`/(.*)` -> `/index.html`) untuk hosting Vercel.
+- [x] Pembaruan `.dockerignore` untuk mengecualikan direktori web, mobile, dokumen, dan artefak saat build kontainer API.
+- [x] Optimasi bundle chunking Rollup di Vite (`manualChunks`) memisahkan `react-vendor` dan `query-vendor` (menghilangkan warning >500 kB).
+- [x] Penambahan validasi skema lingkungan untuk `COOKIE_SAMESITE=none` wajib berpasangan dengan `COOKIE_SECURE=true`.
+- [x] Penambahan panduan konfigurasi environment produksi di `apps/api/.env.example`.
+
 ## Task berikutnya untuk agent
 
 1. Tunggu arahan dari pemilik proyek untuk menentukan milestone berikutnya:
@@ -350,3 +357,8 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 23. **Mitigasi Signed URL Kedaluwarsa di SPA Frontend (`apps/web/src/components/attachments/photo-gallery.tsx`)**:
     - Signed URL gambar memiliki masa berlaku pendek (5 menit) demi keamanan. Jika tab logbook dibiarkan terbuka lebih dari 5 menit, gambar akan gagal dimuat atau pecah saat pengguna melihat galeri.
     - Solusi dua lapis diterapkan: pertama, `staleTime: 4 * 60 * 1000` (4 menit) pada TanStack Query memastikan saat pengguna kembali ke tab, query otomatis dianggap stale dan me-refetch URL baru sebelum masa 5 menit habis. Kedua, jika URL sempat kedaluwarsa, event `onError` pada tag `<img>` bertindak sebagai jaring pengaman (*fail-safe*) yang secara otomatis memicu `queryClient.invalidateQueries` satu kali untuk mendapatkan URL segar tanpa perlu me-reload seluruh halaman.
+
+24. **Konfigurasi SPA Routing Vercel & Cookie Lintas Domain (`SameSite=None; Secure`)**:
+    - Vercel memerlukan konfigurasi rewrite `/(.*)` ke `/index.html` via `apps/web/vercel.json` agar navigasi internal SPA (seperti `/settings` atau `/logs/:id`) tidak memicu `404 Not Found` saat dibuka langsung atau di-refresh.
+    - Pada arsitektur di mana frontend web (Vercel) dan kontainer API (Railway/Render) berada pada domain apex yang berbeda, cookie sesi `daydone_rt` wajib menggunakan `SameSite=None` dan `Secure=true`. Browser modern secara ketat memblokir cookie dengan `SameSite=None` tanpa flag `Secure`. Skema validasi env di API diperketat untuk mendeteksi dan menolak kesalahan konfigurasi ini saat startup.
+    - Optimasi Rollup chunk splitting (`manualChunks`) di Vite mengelompokkan `react-vendor` dan `query-vendor` ke chunk terpisah, meniadakan peringatan batas ukuran bundle (>500 kB) dan meningkatkan efisiensi cache browser di lingkungan produksi.

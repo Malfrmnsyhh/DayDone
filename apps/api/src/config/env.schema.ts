@@ -82,6 +82,15 @@ const envSchema = z
       path: ['COOKIE_SECURE'],
     },
   )
+  .refine(
+    (data) =>
+      !(data.COOKIE_SAMESITE === 'none' && data.COOKIE_SECURE === false),
+    {
+      message:
+        'COOKIE_SAMESITE=none membutuhkan COOKIE_SECURE=true agar browser tidak menolak cookie!',
+      path: ['COOKIE_SECURE'],
+    },
+  )
   .transform((data) => ({
     ...data,
     SWAGGER_ENABLED:

@@ -103,4 +103,26 @@ describe('validateEnv', () => {
     });
     expect(env.COOKIE_SECURE).toBe(false);
   });
+
+  it('menolak bila COOKIE_SAMESITE=none tetapi COOKIE_SECURE=false', () => {
+    expect(() =>
+      validateEnv({
+        ...validConfig,
+        NODE_ENV: 'development',
+        COOKIE_SAMESITE: 'none',
+        COOKIE_SECURE: 'false',
+      }),
+    ).toThrow('COOKIE_SAMESITE=none membutuhkan COOKIE_SECURE=true');
+  });
+
+  it('menerima COOKIE_SAMESITE=none dengan COOKIE_SECURE=true', () => {
+    const env = validateEnv({
+      ...validConfig,
+      NODE_ENV: 'development',
+      COOKIE_SAMESITE: 'none',
+      COOKIE_SECURE: 'true',
+    });
+    expect(env.COOKIE_SAMESITE).toBe('none');
+    expect(env.COOKIE_SECURE).toBe(true);
+  });
 });
