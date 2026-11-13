@@ -54,8 +54,13 @@ export function DashboardPage() {
       {/* Header Daftar Logbook */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Daftar Logbook
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <span>Daftar Logbook</span>
+            {meta && typeof meta.total === 'number' && (
+              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                {meta.total} Catatan
+              </span>
+            )}
           </h1>
           <p className="text-xs text-slate-500">
             Riwayat seluruh catatan aktivitas dan tugas magang Anda.

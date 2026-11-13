@@ -70,9 +70,13 @@ describe('DashboardPage Component', () => {
       ).toBeInTheDocument();
     });
 
-    // Memverifikasi logbook di daftar
+    // Memverifikasi logbook di daftar dan badge total catatan
     expect(
       screen.getByText('Catatan logbook pertama'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 Catatan')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Buka logbook tanggal/i }),
     ).toBeInTheDocument();
   });
 
@@ -82,7 +86,7 @@ describe('DashboardPage Component', () => {
       status: 200,
       json: async () => ({
         data: [],
-        meta: { page: 3, limit: 10, totalItems: 30, totalPages: 3 },
+        meta: { page: 3, limit: 10, total: 30, totalPages: 3 },
       }),
     });
     vi.stubGlobal('fetch', fetchMock);

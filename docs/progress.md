@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 12 November 2026 (persiapan rilis produksi M9, konfigurasi SPA Vercel, optimasi chunking, & validasi cookie lintas domain)
+**Terakhir diperbarui:** 13 November 2026 (penyempurnaan visual indikator catatan & UX kartu logbook)
 
 ## Status per milestone
 
@@ -362,3 +362,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - Vercel memerlukan konfigurasi rewrite `/(.*)` ke `/index.html` via `apps/web/vercel.json` agar navigasi internal SPA (seperti `/settings` atau `/logs/:id`) tidak memicu `404 Not Found` saat dibuka langsung atau di-refresh.
     - Pada arsitektur di mana frontend web (Vercel) dan kontainer API (Railway/Render) berada pada domain apex yang berbeda, cookie sesi `daydone_rt` wajib menggunakan `SameSite=None` dan `Secure=true`. Browser modern secara ketat memblokir cookie dengan `SameSite=None` tanpa flag `Secure`. Skema validasi env di API diperketat untuk mendeteksi dan menolak kesalahan konfigurasi ini saat startup.
     - Optimasi Rollup chunk splitting (`manualChunks`) di Vite mengelompokkan `react-vendor` dan `query-vendor` ke chunk terpisah, meniadakan peringatan batas ukuran bundle (>500 kB) dan meningkatkan efisiensi cache browser di lingkungan produksi.
+
+25. **Indikator Akumulasi Catatan & Interaksi Kartu Logbook di Dashboard (`apps/web/src/pages/dashboard-page.tsx` & `apps/web/src/components/dashboard/log-card.tsx`)**:
+    - Penambahan badge visual jumlah total catatan (`{meta.total} Catatan`) pada header daftar logbook memberikan feedback instan bagi mahasiswa mengenai akumulasi progres catatan magang mereka secara keseluruhan.
+    - Menambahkan atribut `aria-label` yang ramah screen reader pada seluruh tautan kartu logbook (`Buka logbook tanggal ...`) untuk memenuhi standar aksesibilitas WCAG AA serta mempertegas interaksi navigasi.

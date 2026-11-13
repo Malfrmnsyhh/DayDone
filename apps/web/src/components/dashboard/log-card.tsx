@@ -14,6 +14,7 @@ export function LogCard({ log }: LogCardProps) {
   return (
     <Link
       to={`/logs/${log.id}`}
+      aria-label={`Buka logbook tanggal ${formatDateIndonesian(log.date)}`}
       className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-indigo-300 hover:shadow-sm transition"
     >
       <div className="flex items-start gap-4 flex-1 min-w-0">
