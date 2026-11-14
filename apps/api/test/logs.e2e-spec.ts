@@ -291,4 +291,78 @@ describe('Logs & Auth Isolation (e2e)', () => {
       expect(checkRes.status).toBe(404);
     });
   });
+
+  describe('GET /api/v1/logs/stats', () => {
+    it('mengembalikan 401 Unauthorized bila tanpa token', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/logs/stats?month=2026-11',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('mengembalikan 400 bila parameter month tidak ada', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/logs/stats')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('mengembalikan 400 bila format month tidak valid', async () => {
+      const invalidRes1 = await request(app.getHttpServer())
+        .get('/api/v1/logs/stats?month=2026-13')
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(invalidRes1.status).toBe(400);
+
+      const invalidRes2 = await request(app.getHttpServer())
+        .get('/api/v1/logs/stats?month=invalid')
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(invalidRes2.status).toBe(400);
+    });
+
+    it('mengembalikan 200 dan statistik logbook yang di-scope hanya untuk User A', async () => {
+      // User A saat ini memiliki log pada 2026-11-02 (logAId2)
+      // Tambah log lain untuk User A di bulan 2026-11 dan 2026-10
+      await request(app.getHttpServer())
+        .post('/api/v1/logs')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          date: '2026-11-05',
+          description: 'Log ketiga User A di November',
+        });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/logs')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          date: '2026-10-20',
+          description: 'Log User A di Oktober (all-time)',
+        });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/logs/stats?month=2026-11')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.month).toBe('2026-11');
+      // User A punya 2026-11-02 dan 2026-11-05 di bulan November
+      expect(res.body.totalThisMonth).toBe(2);
+      // User A total all-time: 2026-11-02, 2026-11-05, dan 2026-10-20 = 3
+      expect(res.body.totalAllTime).toBe(3);
+      expect(res.body.loggedDates).toEqual(['2026-11-02', '2026-11-05']);
+    });
+
+    it('User B tidak melihat data logbook User A pada statistik', async () => {
+      // User B hanya punya log pada 2026-11-01
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/logs/stats?month=2026-11')
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.month).toBe('2026-11');
+      expect(res.body.totalThisMonth).toBe(1);
+      expect(res.body.totalAllTime).toBe(1);
+      expect(res.body.loggedDates).toEqual(['2026-11-01']);
+    });
+  });
 });
