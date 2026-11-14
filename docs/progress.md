@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 14 November 2026 (perbaikan hasil audit: sesi, scoping logs, telemetri opsional, auth web reaktif)
+**Terakhir diperbarui:** 14 November 2026 (FR-13 statistik bulanan API + web, scaffold mobile Expo M8-1)
 
 ## Status per milestone
 
@@ -16,7 +16,7 @@
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
 | M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
-| M8 Aplikasi mobile | Belum dimulai |
+| M8 Aplikasi mobile | Berjalan — M8-1 scaffold Expo selesai (belum diuji di perangkat Android); M8-2 menunggu kredensial Android OAuth |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
@@ -210,6 +210,14 @@
 - [x] Bug test e2e lampiran: tanggal `2026-10-24` bentrok dengan test lain, diganti `2026-10-25`. Seluruh e2e (55) lolos.
 - [ ] Masih ditunda ke M9: `COOKIE_SAMESITE` lintas situs, Swagger di `render.yaml`, perbaikan `CMD` Dockerfile.
 
+### FR-13 Statistik bulanan & M8-1 Scaffold Mobile (14 November 2026)
+- [x] `GET /api/v1/logs/stats?month=YYYY-MM` → `{ month, totalThisMonth, totalAllTime, loggedDates }`, di-scope `userId`, schema `logStatsQuerySchema` di `@daydone/shared`, spec diperbarui. Unit + e2e (lintas user, 400, 401) lolos; branch coverage `logs.service.ts` 97,9%.
+- [x] Web: kartu "Ringkasan <bulan>" di dashboard — logbook bulan ini, total logbook, dan hari kerja (Sen–Jum) tanpa logbook sampai hari ini (dihitung di client dengan tanggal lokal). Setiap hari kosong adalah tautan ke `/logs/new?date=YYYY-MM-DD`; form buat logbook membaca `?date=`. Stats ikut ter-invalidasi karena query key berada di bawah prefix `['logs']`.
+- [x] M8-1 (sebagian): `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal.
+- [ ] M8-1 AC "development build jalan di Android" belum diverifikasi di perangkat/emulator.
+- [ ] M8-2 menunggu: Android OAuth client ID, SHA-1 (debug & EAS), akun Expo.
+- [ ] Prompt "test login-page + audit aksesibilitas web (NFR-08)" belum dikerjakan.
+
 ## Task berikutnya untuk agent
 
 1. Tunggu arahan dari pemilik proyek untuk menentukan milestone berikutnya:
@@ -227,6 +235,7 @@
 | Akun Render | M6 | Ditunda ke M9 |
 | Akun Vercel | M7 | Ada (terlihat di bookmark) |
 | Akun Expo | M8 | Belum dipastikan |
+| Android OAuth client ID + SHA-1 (debug & EAS) | M8-2 | Belum ada |
 
 ## Keputusan kecil selama pengembangan
 
@@ -272,6 +281,9 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-08 — Fitur Salin Catatan Cepat, Scroll-to-Top Navigasi, & Aksesibilitas WCAG di Web — tombol salin deskripsi dengan feedback 'Tersalin!' untuk mempermudah pelaporan magang, auto-scroll ke atas halaman saat pindah rute, skip link aksesibilitas ('Lewati ke konten utama'), footer informasi penyimpanan privat, dan auto-reset state error UserAvatar saat prop avatarUrl berganti.
 - 2026-11-14 — Pembersihan sesi oportunistik (tanpa `@nestjs/schedule`) — menghindari dependency dan job terjadwal; baris usang dibersihkan per user saat login atau refresh.
 - 2026-11-14 — Sesi lama dicabut di backend saat reconnect Drive, bukan dengan memanggil logout dari web — bila login ulang gagal, pengguna tidak ikut ter-logout.
+- 2026-11-14 — Q1 diputuskan Expo dan Q2 satu entri per hari — dicatat di `docs/01-prd.md` bagian 12.
+- 2026-11-14 — `/logs/stats` tidak menghitung hari kosong di server — server tidak tahu tanggal lokal pengguna; client menghitung dari `loggedDates` (aturan tanggal AGENTS #4).
+- 2026-11-14 — Override `minimatch >=11.0.1` dipindah ke `pnpm-workspace.yaml` — pnpm 12 membaca overrides dari file itu; menutup advisory moderate lewat `@expo/fingerprint` (diuji: fingerprint tetap berjalan).
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
