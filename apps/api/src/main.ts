@@ -10,6 +10,8 @@ import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
   app.setGlobalPrefix('api/v1');
@@ -21,9 +23,7 @@ async function bootstrap() {
     }),
   );
 
-  const trustProxy = process.env.TRUST_PROXY
-    ? Number(process.env.TRUST_PROXY)
-    : 0;
+  const trustProxy = configService.get<number>('TRUST_PROXY', 0);
   if (trustProxy > 0) {
     (app.getHttpAdapter().getInstance() as Express).set(
       'trust proxy',
@@ -31,7 +31,10 @@ async function bootstrap() {
     );
   }
 
-  const corsOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:5173';
+  const corsOrigins = configService.get<string>(
+    'CORS_ORIGINS',
+    'http://localhost:5173',
+  );
   app.enableCors({
     origin: corsOrigins.split(',').map((o) => o.trim()),
     credentials: true,
@@ -40,7 +43,6 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalPipes(new StandardSchemaValidationPipe());
 
-  const configService = app.get(ConfigService);
   const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', true);
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
@@ -75,7 +77,7 @@ async function bootstrap() {
     });
   }
 
-  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port, '0.0.0.0');
 }
 await bootstrap();
