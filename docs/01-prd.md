@@ -170,7 +170,7 @@ Sebagai pengguna, bila akses Drive dicabut atau kedaluwarsa, saya ingin diberi t
 
 | # | Pertanyaan | Dampak | Perlu diputuskan sebelum |
 |---|---|---|---|
-| Q1 | Mobile final memakai React Native (Expo) atau Flutter? | Struktur `apps/mobile` dan cara berbagi tipe | M8 |
-| Q2 | Apakah satu hari perlu bisa berisi beberapa entri? | Constraint `@@unique([userId, date])` | Sebelum rilis publik |
+| Q1 | Mobile final memakai React Native (Expo) atau Flutter? | Struktur `apps/mobile` dan cara berbagi tipe | **Diputuskan 14 Nov 2026: Expo (React Native) + expo-router + TypeScript** |
+| Q2 | Apakah satu hari perlu bisa berisi beberapa entri? | Constraint `@@unique([userId, date])` | **Diputuskan 14 Nov 2026: satu entri per hari (sesuai asumsi bagian 11)** |
 | Q3 | Format PDF mengikuti template kampus tertentu? | Desain fitur ekspor | Fase setelah MVP |
 | Q4 | Domain kustom (misal `daydone.app`) akan dipakai? | Konfigurasi cookie refresh token web | M9 |
