@@ -190,27 +190,24 @@ export class LogsService {
     id: string,
     dto: UpdateLogDto,
   ): Promise<LogResponse> {
-    // Pastikan logbook ada dan milik pengguna (lempar 404 jika bukan)
-    await this.findOne(userId, id);
-
     const dbDate = dto.date ? toDbDate(dto.date) : undefined;
 
     try {
-      const updated = await this.prisma.logEntry.update({
-        where: { id },
+      const result = await this.prisma.logEntry.updateMany({
+        where: { id, userId },
         data: {
-          date: dbDate,
-          description: dto.description,
-        },
-        include: {
-          attachments: {
-            orderBy: { position: 'asc' },
-          },
+          ...(dbDate !== undefined && { date: dbDate }),
+          ...(dto.description !== undefined && {
+            description: dto.description,
+          }),
         },
       });
 
-      const urlBuilder = await this.getUrlBuilder(userId);
-      return toLogResponse(updated, urlBuilder);
+      if (result.count === 0) {
+        throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
+      }
+
+      return await this.findOne(userId, id);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -235,7 +232,7 @@ export class LogsService {
   async remove(userId: string, id: string): Promise<void> {
     const log = await this.prisma.logEntry.findFirst({
       where: { id, userId },
-      include: {
+      select: {
         attachments: {
           select: { driveFileId: true },
         },
@@ -246,10 +243,13 @@ export class LogsService {
       throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
     }
 
-    // Hapus logbook di database (cascade akan menghapus baris attachments)
-    await this.prisma.logEntry.delete({
-      where: { id },
+    const result = await this.prisma.logEntry.deleteMany({
+      where: { id, userId },
     });
+
+    if (result.count === 0) {
+      throw new NotFoundException(`Logbook dengan id ${id} tidak ditemukan`);
+    }
 
     // Pindahkan seluruh file lampiran di Drive ke Trash (best-effort)
     if (log.attachments.length > 0) {

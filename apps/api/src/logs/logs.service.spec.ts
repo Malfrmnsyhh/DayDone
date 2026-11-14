@@ -35,7 +35,9 @@ describe('LogsService', () => {
         findMany: vi.fn(),
         count: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
         delete: vi.fn(),
+        deleteMany: vi.fn(),
       },
       $transaction: vi.fn(),
     };
@@ -139,9 +141,9 @@ describe('LogsService', () => {
   });
 
   describe('update', () => {
-    it('harus berhasil memperbarui logbook', async () => {
-      mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
-      mockPrisma.logEntry.update.mockResolvedValue({
+    it('harus berhasil memperbarui logbook dengan updateMany yang di-scope userId', async () => {
+      mockPrisma.logEntry.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.logEntry.findFirst.mockResolvedValue({
         ...dummyLogEntry,
         description: 'Updated deskripsi',
       });
@@ -149,13 +151,24 @@ describe('LogsService', () => {
       const result = await service.update(userId, dummyLogEntry.id, {
         description: 'Updated deskripsi',
       });
+
+      expect(mockPrisma.logEntry.updateMany).toHaveBeenCalledWith({
+        where: { id: dummyLogEntry.id, userId },
+        data: { description: 'Updated deskripsi' },
+      });
       expect(result.description).toBe('Updated deskripsi');
     });
 
+    it('harus melempar NotFoundException jika id tidak ditemukan atau milik user lain saat update', async () => {
+      mockPrisma.logEntry.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(userId, 'unknown-id', { description: 'Updated' }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockPrisma.logEntry.findFirst).not.toHaveBeenCalled();
+    });
+
     it('harus melempar LOG_DATE_CONFLICT jika update tanggal menyebabkan P2002', async () => {
-      mockPrisma.logEntry.findFirst
-        .mockResolvedValueOnce(dummyLogEntry) // findOne check
-        .mockResolvedValueOnce({ id: 'existing-other-id' }); // findFirst for existing conflict
       const p2002Error = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         {
@@ -163,7 +176,10 @@ describe('LogsService', () => {
           clientVersion: '7.10.1',
         },
       );
-      mockPrisma.logEntry.update.mockRejectedValue(p2002Error);
+      mockPrisma.logEntry.updateMany.mockRejectedValue(p2002Error);
+      mockPrisma.logEntry.findFirst.mockResolvedValue({
+        id: 'existing-other-id',
+      });
 
       await expect(
         service.update(userId, dummyLogEntry.id, { date: '2026-11-02' }),
@@ -172,15 +188,15 @@ describe('LogsService', () => {
   });
 
   describe('remove', () => {
-    it('harus menghapus logbook jika ditemukan dan milik pengguna', async () => {
+    it('harus menghapus logbook jika ditemukan dan milik pengguna menggunakan deleteMany yang di-scope userId', async () => {
       mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
-      mockPrisma.logEntry.delete.mockResolvedValue(dummyLogEntry);
+      mockPrisma.logEntry.deleteMany.mockResolvedValue({ count: 1 });
 
       await expect(
         service.remove(userId, dummyLogEntry.id),
       ).resolves.toBeUndefined();
-      expect(mockPrisma.logEntry.delete).toHaveBeenCalledWith({
-        where: { id: dummyLogEntry.id },
+      expect(mockPrisma.logEntry.deleteMany).toHaveBeenCalledWith({
+        where: { id: dummyLogEntry.id, userId },
       });
     });
 
@@ -190,7 +206,34 @@ describe('LogsService', () => {
       await expect(service.remove(userId, 'unknown-id')).rejects.toThrow(
         NotFoundException,
       );
-      expect(mockPrisma.logEntry.delete).not.toHaveBeenCalled();
+      expect(mockPrisma.logEntry.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('harus melempar NotFoundException jika deleteMany menghasilkan count 0', async () => {
+      mockPrisma.logEntry.findFirst.mockResolvedValue(dummyLogEntry);
+      mockPrisma.logEntry.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.remove(userId, dummyLogEntry.id)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(
+        mockAttachmentsService.trashAttachmentsForLog,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('harus mentrash lampiran di Drive jika logbook memiliki lampiran', async () => {
+      const logWithAttachments = {
+        ...dummyLogEntry,
+        attachments: [{ driveFileId: 'drive-file-123' }],
+      };
+      mockPrisma.logEntry.findFirst.mockResolvedValue(logWithAttachments);
+      mockPrisma.logEntry.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.remove(userId, dummyLogEntry.id);
+
+      expect(
+        mockAttachmentsService.trashAttachmentsForLog,
+      ).toHaveBeenCalledWith(userId, logWithAttachments.attachments);
     });
   });
 
