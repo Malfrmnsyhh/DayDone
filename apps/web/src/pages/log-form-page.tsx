@@ -2,7 +2,13 @@ import { zodResolver } from '../lib/zod-resolver.js';
 import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate, useParams, useBlocker } from 'react-router-dom';
+import {
+  Link,
+  useBlocker,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { createLogSchema, type CreateLogDto } from '@daydone/shared';
 import { ApiError } from '../api/api-error.js';
 import { useCreateLog, useLogDetail, useUpdateLog } from '../api/logs.js';
@@ -16,6 +22,13 @@ export function LogFormPage() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const today = getTodayLocalDateString();
+  const [searchParams] = useSearchParams();
+  // Tanggal awal dari query ?date=YYYY-MM-DD (mis. dari ringkasan hari kosong), hanya di mode buat
+  const requestedDate = searchParams.get('date');
+  const initialDate =
+    !isEdit && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+      ? requestedDate
+      : today;
 
   const [conflictLogId, setConflictLogId] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -40,7 +53,7 @@ export function LogFormPage() {
   } = useForm<CreateLogDto>({
     resolver: zodResolver(createLogSchema) as any,
     defaultValues: {
-      date: today,
+      date: initialDate,
       description: '',
     },
   });

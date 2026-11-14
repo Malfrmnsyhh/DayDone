@@ -21,6 +21,34 @@ describe('LogFormPage Component', () => {
     expect(dateInput).toHaveAttribute('max');
   });
 
+  it('mode buat: tanggal terisi dari query ?date= (dari ringkasan hari kosong)', async () => {
+    render(
+      <TestWrapper
+        initialEntries={['/logs/new?date=2026-11-03']}
+        routePath="/logs/new"
+      >
+        <LogFormPage />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByLabelText(/Tanggal Logbook/i)).toHaveValue('2026-11-03');
+  });
+
+  it('mode buat: query ?date= yang tidak valid diabaikan (kembali ke hari ini)', async () => {
+    render(
+      <TestWrapper
+        initialEntries={['/logs/new?date=bukan-tanggal']}
+        routePath="/logs/new"
+      >
+        <LogFormPage />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByLabelText(/Tanggal Logbook/i)).not.toHaveValue(
+      'bukan-tanggal',
+    );
+  });
+
   it('mode ubah: data terisi dari detail, tanggal TIDAK di-disable', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('/logs/log-123')) {
