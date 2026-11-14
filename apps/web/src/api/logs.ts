@@ -2,6 +2,7 @@ import type {
   CreateLogDto,
   Log,
   LogListItem,
+  LogStats,
   Paginated,
   UpdateLogDto,
 } from '@daydone/shared';
@@ -46,6 +47,19 @@ export function useLogByDate(date: string) {
     queryKey: ['logs', 'by-date', date],
     queryFn: () => apiFetch<Log>(`/logs/by-date/${date}`),
     retry: false, // 404 adalah kondisi wajar saat logbook tanggal tersebut belum dibuat
+  });
+}
+
+/**
+ * Hook untuk mengambil statistik logbook per bulan (FR-13).
+ * Query key berada di bawah prefix ['logs'] sehingga ikut ter-invalidasi
+ * setiap kali logbook dibuat, diubah, atau dihapus.
+ */
+export function useLogStats(month: string) {
+  return useQuery<LogStats>({
+    queryKey: ['logs', 'stats', month],
+    queryFn: () =>
+      apiFetch<LogStats>(`/logs/stats?month=${encodeURIComponent(month)}`),
   });
 }
 
