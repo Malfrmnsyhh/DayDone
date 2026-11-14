@@ -49,13 +49,53 @@ export class SessionsService {
   }
 
   /**
+   * Membersihkan sesi milik user yang sudah kedaluwarsa atau sudah dicabut lebih dari 7 hari.
+   * Sesi yang baru dicabut (< 7 hari) tetap dipertahankan untuk deteksi token reuse.
+   */
+  async cleanExpiredOrRevokedSessions(userId: string): Promise<number> {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const result = await this.prisma.session.deleteMany({
+      where: {
+        userId,
+        OR: [
+          {
+            expiresAt: { lte: now },
+            revokedAt: null,
+          },
+          {
+            revokedAt: { lte: sevenDaysAgo },
+          },
+        ],
+      },
+    });
+
+    return result.count;
+  }
+
+  /**
+   * Pembersihan oportunistik: best-effort, tidak boleh menggagalkan login atau refresh.
+   */
+  private async cleanUpBestEffort(userId: string): Promise<void> {
+    try {
+      await this.cleanExpiredOrRevokedSessions(userId);
+    } catch {
+      // Abaikan: baris usang akan dibersihkan pada kesempatan berikutnya
+    }
+  }
+
+  /**
    * Membuat sesi baru dengan refresh token 32-byte acak base64url.
+   * Menjalankan pembersihan sesi usang milik user secara oportunistik.
    */
   async createSession(
     userId: string,
     platform: ClientPlatform,
     userAgent?: string,
   ): Promise<CreatedSessionResult> {
+    await this.cleanUpBestEffort(userId);
+
     const refreshToken = randomBytes(32).toString('base64url');
     const refreshTokenHash = this.hashToken(refreshToken);
 
@@ -91,7 +131,7 @@ export class SessionsService {
     const tokenHash = this.hashToken(currentRefreshToken);
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const rotated = await this.prisma.$transaction(async (tx) => {
         const session = await tx.session.findUnique({
           where: { refreshTokenHash: tokenHash },
           include: { user: true },
@@ -160,6 +200,10 @@ export class SessionsService {
           user: session.user,
         };
       });
+
+      // Rotasi terjadi tiap ~15 menit, jadi pembersihan juga dijalankan di sini (di luar transaksi)
+      await this.cleanUpBestEffort(rotated.session.userId);
+      return rotated;
     } catch (error) {
       if (error instanceof TokenReuseError) {
         // Cabut SEMUA sesi aktif user secara persisten di database

@@ -42,6 +42,7 @@ describe('SessionsService', () => {
         findUnique: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: vi.fn((callback) => callback(mockPrisma)),
     };
@@ -52,6 +53,30 @@ describe('SessionsService', () => {
     );
   });
 
+  describe('cleanExpiredOrRevokedSessions', () => {
+    it('menghapus sesi kedaluwarsa atau dicabut lebih dari 7 hari hanya untuk user terkait', async () => {
+      mockPrisma.session.deleteMany.mockResolvedValueOnce({ count: 3 });
+
+      const count = await service.cleanExpiredOrRevokedSessions(userId);
+
+      expect(count).toBe(3);
+      expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({
+        where: {
+          userId,
+          OR: [
+            {
+              expiresAt: { lte: expect.any(Date) },
+              revokedAt: null,
+            },
+            {
+              revokedAt: { lte: expect.any(Date) },
+            },
+          ],
+        },
+      });
+    });
+  });
+
   describe('createSession', () => {
     it('membuat sesi baru dengan hash SHA-256 dan token base64url', async () => {
       mockPrisma.session.create.mockResolvedValue(dummySession);
@@ -59,6 +84,22 @@ describe('SessionsService', () => {
       const result = await service.createSession(userId, 'WEB', 'agent');
       expect(result.refreshToken).toBeDefined();
       expect(result.refreshToken.length).toBeGreaterThanOrEqual(40); // 32 bytes base64url ~ 43 chars
+      expect(mockPrisma.session.create).toHaveBeenCalled();
+      expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId }),
+        }),
+      );
+    });
+
+    it('tetap berhasil membuat sesi baru meskipun pembersihan oportunistik gagal', async () => {
+      mockPrisma.session.deleteMany.mockRejectedValueOnce(
+        new Error('DB connection error'),
+      );
+      mockPrisma.session.create.mockResolvedValue(dummySession);
+
+      const result = await service.createSession(userId, 'WEB', 'agent');
+      expect(result.refreshToken).toBeDefined();
       expect(mockPrisma.session.create).toHaveBeenCalled();
     });
   });
@@ -78,6 +119,12 @@ describe('SessionsService', () => {
         where: { id: dummySession.id },
         data: { replacedById: 'session-uuid-2' },
       });
+      // Pembersihan sesi usang juga berjalan setelah rotasi berhasil
+      expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: dummySession.userId }),
+        }),
+      );
     });
 
     it('mendeteksi pemakaian ulang (reuse) saat updateMany count === 0 dan mencabut SEMUA sesi user', async () => {
