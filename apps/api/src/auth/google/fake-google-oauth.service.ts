@@ -9,6 +9,7 @@ import type {
 @Injectable()
 export class FakeGoogleOAuthService implements GoogleOAuthService {
   private readonly scenarios = new Map<string, GoogleAuthResult>();
+  public readonly revokedTokens: string[] = [];
 
   constructor() {
     this.resetDefaults();
@@ -16,6 +17,7 @@ export class FakeGoogleOAuthService implements GoogleOAuthService {
 
   resetDefaults() {
     this.scenarios.clear();
+    this.revokedTokens.length = 0;
 
     // Default User A
     this.scenarios.set('code-dev-a', {
@@ -91,5 +93,9 @@ export class FakeGoogleOAuthService implements GoogleOAuthService {
     }
 
     return scenario;
+  }
+
+  async revokeToken(token: string): Promise<void> {
+    this.revokedTokens.push(token);
   }
 }

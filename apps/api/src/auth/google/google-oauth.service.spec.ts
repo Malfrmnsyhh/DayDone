@@ -44,5 +44,10 @@ describe('Google OAuth Service', () => {
         fakeService.exchangeCode('random-invalid-code'),
       ).rejects.toThrow(DomainException);
     });
+
+    it('mencatat token yang dicabut via revokeToken', async () => {
+      await fakeService.revokeToken('token-to-revoke');
+      expect(fakeService.revokedTokens).toContain('token-to-revoke');
+    });
   });
 });

@@ -13,6 +13,7 @@ export interface GoogleOAuthService {
     platform: 'WEB' | 'MOBILE',
     redirectUri?: string,
   ): Promise<GoogleAuthResult>;
+  revokeToken(token: string): Promise<void>;
 }
 
 export const GOOGLE_OAUTH_SERVICE = Symbol('GOOGLE_OAUTH_SERVICE');

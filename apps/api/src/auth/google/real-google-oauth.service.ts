@@ -99,4 +99,11 @@ export class RealGoogleOAuthService implements GoogleOAuthService {
       );
     }
   }
+
+  /**
+   * Mencabut token Google OAuth (misal saat penghapusan akun).
+   */
+  async revokeToken(token: string): Promise<void> {
+    await this.client.revokeToken(token);
+  }
 }

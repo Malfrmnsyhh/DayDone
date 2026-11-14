@@ -1,6 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  GOOGLE_OAUTH_SERVICE,
+  type GoogleOAuthService,
+} from '../auth/google/google-oauth.interface.js';
 import { EncryptionService } from '../common/crypto/encryption.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -10,13 +12,14 @@ export class UsersService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
     private readonly encryptionService: EncryptionService,
+    @Inject(GOOGLE_OAUTH_SERVICE)
+    private readonly googleOAuthService: GoogleOAuthService,
   ) {}
 
   /**
    * Menghapus akun pengguna beserta seluruh datanya di database:
-   * 1. Mencabut refresh token Google (OAuth2Client.revokeToken) secara best-effort.
+   * 1. Mencabut refresh token Google (googleOAuthService.revokeToken) secara best-effort.
    * 2. Menghapus user di database (cascade otomatis menghapus sesi, logbook, lampiran).
    * File di Google Drive sengaja tidak dihapus sesuai kebijakan privasi dan dokumen desain.
    */
@@ -39,15 +42,7 @@ export class UsersService {
         const decryptedToken = this.encryptionService.decrypt(
           user.googleRefreshToken,
         );
-        const auth = new OAuth2Client({
-          clientId: this.configService.getOrThrow<string>(
-            'GOOGLE_WEB_CLIENT_ID',
-          ),
-          clientSecret: this.configService.getOrThrow<string>(
-            'GOOGLE_WEB_CLIENT_SECRET',
-          ),
-        });
-        await auth.revokeToken(decryptedToken);
+        await this.googleOAuthService.revokeToken(decryptedToken);
       } catch (err: unknown) {
         this.logger.warn(
           `Gagal mencabut token Google saat hapus akun user ${userId}: ${String((err as Error)?.message)}`,
