@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import {
   apiFetch,
@@ -14,6 +15,8 @@ import {
   onAuthFailure,
   refreshSession,
   setSession,
+  subscribeAccessToken,
+  subscribeSession,
 } from '../api/client.js';
 
 export interface AuthContextValue {
@@ -28,8 +31,19 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(getCurrentUser());
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const token = useSyncExternalStore(
+    subscribeAccessToken,
+    getAccessToken,
+    () => null,
+  );
+  const user = useSyncExternalStore(
+    subscribeSession,
+    getCurrentUser,
+    () => null,
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !(getAccessToken() && getCurrentUser());
+  });
 
   // Inisialisasi sesi saat aplikasi dimuat pertama kali (Single-flight refresh dari HttpOnly cookie)
   useEffect(() => {
@@ -37,21 +51,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initAuth() {
       try {
-        const token = await refreshSession();
-        if (token && isMounted) {
+        if (getAccessToken() && getCurrentUser()) {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const refreshedToken = await refreshSession();
+        if (refreshedToken && isMounted) {
           const profile = await apiFetch<User>('/auth/me');
           if (isMounted) {
-            setUser(profile);
-            setSession(token, profile);
+            setSession(refreshedToken, profile);
           }
         } else if (isMounted) {
           clearSession();
-          setUser(null);
         }
       } catch {
         if (isMounted) {
           clearSession();
-          setUser(null);
         }
       } finally {
         if (isMounted) {
@@ -62,9 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Dengarkan event pemutusan sesi jika token kadaluwarsa di tengah jalan
     const unsubscribe = onAuthFailure(() => {
-      if (isMounted) {
-        setUser(null);
-      }
+      clearSession();
     });
 
     initAuth();
@@ -88,7 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       setSession(res.accessToken, res.user || null);
-      setUser(res.user || null);
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Abaikan error jaringan saat logout
     } finally {
       clearSession();
-      setUser(null);
     }
   }, []);
 
@@ -112,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!getAccessToken()) return;
     try {
       const profile = await apiFetch<User>('/auth/me');
-      setUser(profile);
       setSession(getAccessToken(), profile);
     } catch {
       // Bila gagal memuat profil, biarkan state sesi saat ini
@@ -121,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextValue = {
     user,
-    isAuthenticated: !!user && !!getAccessToken(),
+    isAuthenticated: !!user && !!token,
     isLoading,
     loginWithCode,
     logout,
