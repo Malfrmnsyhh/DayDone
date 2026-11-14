@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 13 November 2026 (penyempurnaan visual indikator catatan & UX kartu logbook)
+**Terakhir diperbarui:** 14 November 2026 (perbaikan hasil audit: sesi, scoping logs, telemetri opsional, auth web reaktif)
 
 ## Status per milestone
 
@@ -197,6 +197,19 @@
 - [x] Penambahan validasi skema lingkungan untuk `COOKIE_SAMESITE=none` wajib berpasangan dengan `COOKIE_SECURE=true`.
 - [x] Penambahan panduan konfigurasi environment produksi di `apps/api/.env.example`.
 
+### Perbaikan hasil audit (14 November 2026, pengembangan lokal)
+- [x] Pembersihan tabel `sessions`: sesi kedaluwarsa atau dicabut > 7 hari dihapus best-effort saat login dan setelah rotasi refresh (sesi yang baru dicabut tetap disimpan untuk deteksi reuse).
+- [x] `JwtAuthGuard` mengembalikan 401 dengan `code: "SESSION_EXPIRED"` (sebelumnya tanpa `code`); `docs/04-api-spec.md` diperbarui.
+- [x] Revoke token Google dipindah dari `UsersService` ke `GoogleOAuthService.revokeToken` (fake ikut diperbarui).
+- [x] `POST /auth/google` (WEB) mencabut sesi lama dari cookie `daydone_rt` saat login ulang / reconnect Drive; kegagalan pencabutan tidak menggagalkan login.
+- [x] `LogsService.update/remove` memakai `updateMany/deleteMany` dengan `{ id, userId }` (atomik, sesuai aturan #3).
+- [x] `ObserveModule` hanya dimuat bila `OBSERVE_APP_KEY` dan `OBSERVE_APP_SECRET` terisi; tidak ada lagi telemetri dengan kunci placeholder.
+- [x] `main.ts` membaca `PORT`, `CORS_ORIGINS`, `TRUST_PROXY` dari `ConfigService` tervalidasi.
+- [x] `pnpm audit` bersih (override `minimatch`, `@nestjs/cli` ke 12.0.12).
+- [x] Web: 401 dari `/auth/me` kini memicu refresh (pengecualian hanya `/auth/google`, `/auth/refresh`, `/auth/logout`); status login reaktif lewat `useSyncExternalStore`.
+- [x] Bug test e2e lampiran: tanggal `2026-10-24` bentrok dengan test lain, diganti `2026-10-25`. Seluruh e2e (55) lolos.
+- [ ] Masih ditunda ke M9: `COOKIE_SAMESITE` lintas situs, Swagger di `render.yaml`, perbaikan `CMD` Dockerfile.
+
 ## Task berikutnya untuk agent
 
 1. Tunggu arahan dari pemilik proyek untuk menentukan milestone berikutnya:
@@ -242,7 +255,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-04 — Redaksi otomatis token HMAC pada query URL logging: serializer Pino mendeteksi parameter `token` pada `/attachments/:id/content?token=...` dan menggantinya menjadi `[REDACTED]` agar secret HMAC tidak tersimpan di log server.
 - 2026-11-04 — Override pnpm untuk `undici` dan `tmp`: konfigurasi `overrides` di root `package.json` dan `pnpm-workspace.yaml` mengeliminasi 8 kerentanan keamanan tingkat high pada dependensi transitif `@nestjs/mau`.
 - 2026-11-05 — Deploy staging API ditunda ke M9 — kendala kartu kredit (Render) dan healthcheck gagal (Railway); pengembangan web (M7) dan mobile (M8) memakai API lokal (`http://localhost:3000`).
-- 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9.
+- 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9. *Koreksi 14 Nov: `prisma` ternyata ada di `dependencies`; tersangka yang lebih mungkin adalah `CMD ["pnpm", ...]` yang dijalankan sebagai user `node` dan migrasi di perintah start.*
 - 2026-11-05 — Akses token web hanya di memori — `localStorage` dan `sessionStorage` tidak dipakai demi memitigasi risiko pencurian token melalui celah XSS.
 - 2026-11-05 — Single-flight refresh di API client web — promise refresh bersama di tingkat modul mencegah race condition dan kegagalan rotasi refresh token akibat request paralel atau React StrictMode.
 - 2026-11-05 — Pemakaian Google Identity Services (GIS) `initCodeClient` langsung tanpa library wrapper — menghindari konflik peer-dependency React 19 dan menjaga integrasi popup tetap transparan serta konsisten dengan uji M4.
@@ -257,6 +270,8 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-06 — Validasi teks konfirmasi hapus akun ketat — mewajibkan pengguna mengetik kata `"HAPUS"` huruf kapital persis di modal dialog sebelum tombol eksekusi mutasi `DELETE /users/me` dapat diaktifkan.
 - 2026-11-07 — Peningkatan UX Lightbox, Favicon & Pembersihan Memory Leak Dropzone — penambahan favicon SVG brand DayDone, listener Escape/navigasi panah global pada window untuk lightbox, fitur klik backdrop untuk menutup modal, serta pembersihan URL.revokeObjectURL otomatis pada Dropzone saat unmount.
 - 2026-11-08 — Fitur Salin Catatan Cepat, Scroll-to-Top Navigasi, & Aksesibilitas WCAG di Web — tombol salin deskripsi dengan feedback 'Tersalin!' untuk mempermudah pelaporan magang, auto-scroll ke atas halaman saat pindah rute, skip link aksesibilitas ('Lewati ke konten utama'), footer informasi penyimpanan privat, dan auto-reset state error UserAvatar saat prop avatarUrl berganti.
+- 2026-11-14 — Pembersihan sesi oportunistik (tanpa `@nestjs/schedule`) — menghindari dependency dan job terjadwal; baris usang dibersihkan per user saat login atau refresh.
+- 2026-11-14 — Sesi lama dicabut di backend saat reconnect Drive, bukan dengan memanggil logout dari web — bila login ulang gagal, pengguna tidak ikut ter-logout.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
