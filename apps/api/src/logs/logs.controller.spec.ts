@@ -14,6 +14,7 @@ describe('LogsController', () => {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
+    stats: ReturnType<typeof vi.fn>;
   };
   let mockAttachmentsService: {
     uploadAttachments: ReturnType<typeof vi.fn>;
@@ -44,6 +45,12 @@ describe('LogsController', () => {
       create: vi.fn().mockResolvedValue(mockLogResponse),
       update: vi.fn().mockResolvedValue(mockLogResponse),
       remove: vi.fn().mockResolvedValue(undefined),
+      stats: vi.fn().mockResolvedValue({
+        month: '2026-11',
+        totalThisMonth: 5,
+        totalAllTime: 12,
+        loggedDates: ['2026-11-01', '2026-11-02'],
+      }),
     };
 
     mockAttachmentsService = {
@@ -121,5 +128,16 @@ describe('LogsController', () => {
       mockUser.userId,
       mockLogResponse.id,
     );
+  });
+
+  it('harus memanggil stats dengan userId dan query month', async () => {
+    const result = await controller.stats(mockUser, { month: '2026-11' });
+    expect(mockLogsService.stats).toHaveBeenCalledWith(
+      mockUser.userId,
+      '2026-11',
+    );
+    expect(result.month).toBe('2026-11');
+    expect(result.totalThisMonth).toBe(5);
+    expect(result.totalAllTime).toBe(12);
   });
 });

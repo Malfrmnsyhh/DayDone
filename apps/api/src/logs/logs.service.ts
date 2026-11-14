@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { AttachmentsService } from '../attachments/attachments.service.js';
-import { toDbDate } from '../common/date.js';
+import { fromDbDate, toDbDate } from '../common/date.js';
 import { DomainException } from '../common/errors/domain.exception.js';
 import { ErrorCode } from '../common/errors/error-codes.js';
 import { DriveStatus, Prisma } from '../generated/prisma/client.js';
@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type {
   CreateLogDto,
   ListLogsQuery,
+  LogStats,
   UpdateLogDto,
 } from './dto/log.schema.js';
 import {
@@ -143,6 +144,53 @@ export class LogsService {
 
     const urlBuilder = await this.getUrlBuilder(userId);
     return toLogResponse(log, urlBuilder);
+  }
+
+  async stats(userId: string, month: string): Promise<LogStats> {
+    const startDate = toDbDate(`${month}-01`);
+    const nextMonthStr = this.getNextMonthString(month);
+    const nextMonthDate = toDbDate(nextMonthStr);
+
+    const [totalAllTime, monthLogs] = await this.prisma.$transaction([
+      this.prisma.logEntry.count({
+        where: { userId },
+      }),
+      this.prisma.logEntry.findMany({
+        where: {
+          userId,
+          date: {
+            gte: startDate,
+            lt: nextMonthDate,
+          },
+        },
+        select: {
+          date: true,
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      }),
+    ]);
+
+    return {
+      month,
+      totalThisMonth: monthLogs.length,
+      totalAllTime,
+      loggedDates: monthLogs.map((log) => fromDbDate(log.date)),
+    };
+  }
+
+  private getNextMonthString(yearMonth: string): string {
+    const [yearStr, monthStr] = yearMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+
+    if (month === 12) {
+      return `${year + 1}-01-01`;
+    }
+
+    const nextMonth = String(month + 1).padStart(2, '0');
+    return `${year}-${nextMonth}-01`;
   }
 
   async create(userId: string, dto: CreateLogDto): Promise<LogResponse> {

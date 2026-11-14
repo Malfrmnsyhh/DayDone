@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createLogSchema,
   listLogsQuerySchema,
+  logStatsQuerySchema,
   updateLogSchema,
 } from './log.schema.js';
 
@@ -139,6 +140,29 @@ describe('Log Schema', () => {
           'Tanggal from harus lebih kecil atau sama dengan to',
         );
       }
+    });
+  });
+
+  describe('logStatsQuerySchema', () => {
+    it('menerima format YYYY-MM yang valid', () => {
+      const parsed = logStatsQuerySchema.safeParse({ month: '2026-11' });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.month).toBe('2026-11');
+      }
+    });
+
+    it('menolak bulan 13 atau 00', () => {
+      expect(logStatsQuerySchema.safeParse({ month: '2026-13' }).success).toBe(
+        false,
+      );
+      expect(logStatsQuerySchema.safeParse({ month: '2026-00' }).success).toBe(
+        false,
+      );
+    });
+
+    it('menolak bila month tidak ada', () => {
+      expect(logStatsQuerySchema.safeParse({}).success).toBe(false);
     });
   });
 });

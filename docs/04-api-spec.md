@@ -202,6 +202,29 @@ Response `200`: objek `Log` lengkap. `404` bila tidak ada atau bukan milik pengg
 
 Mengambil logbook pada tanggal tertentu. Dipakai client untuk mengecek "apakah hari ini sudah diisi". `404` bila belum ada.
 
+### `GET /logs/stats`
+
+Mengambil ringkasan statistik logbook bulanan dan total seluruh waktu milik pengguna.
+
+Query:
+
+| Param | Tipe | Keterangan |
+|---|---|---|
+| `month` | string, wajib | Format `YYYY-MM` (contoh: `2026-11`) |
+
+Response `200`:
+
+```json
+{
+  "month": "2026-11",
+  "totalThisMonth": 12,
+  "totalAllTime": 45,
+  "loggedDates": ["2026-11-01", "2026-11-03", "2026-11-05"]
+}
+```
+
+Error: `400` bila parameter `month` tidak disertakan atau formatnya bukan `YYYY-MM` (misal `2026-13` atau string acak). `401` bila tanpa token atau token kedaluwarsa.
+
 ### `POST /logs`
 
 Request:

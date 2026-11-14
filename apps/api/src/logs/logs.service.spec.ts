@@ -97,6 +97,18 @@ describe('LogsService', () => {
         expect(domainErr.details).toEqual({ existingLogId: 'existing-id-123' });
       }
     });
+
+    it('harus melempar kembali error tak terduga selain P2002', async () => {
+      const genericError = new Error('Database connection failed');
+      mockPrisma.logEntry.create.mockRejectedValue(genericError);
+
+      await expect(
+        service.create(userId, {
+          date: '2026-11-01',
+          description: 'Test',
+        }),
+      ).rejects.toThrow('Database connection failed');
+    });
   });
 
   describe('findOne & findByDate', () => {
@@ -137,6 +149,59 @@ describe('LogsService', () => {
       await expect(service.findByDate(userId, '2026-11-01')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('harus mengembalikan url null pada lampiran jika driveStatus NEEDS_RECONNECT', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        driveStatus: 'NEEDS_RECONNECT',
+      });
+      const logWithAtt = {
+        ...dummyLogEntry,
+        attachments: [
+          {
+            id: 'att-1',
+            fileName: 'photo.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 1000,
+            width: 800,
+            height: 600,
+            position: 0,
+          },
+        ],
+      };
+      mockPrisma.logEntry.findFirst.mockResolvedValue(logWithAtt);
+
+      const result = await service.findOne(userId, dummyLogEntry.id);
+      expect(result.attachments[0]?.url).toBeNull();
+      expect(result.attachments[0]?.urlExpiresAt).toBeNull();
+    });
+
+    it('harus mengeksekusi urlBuilder callback saat log memiliki lampiran dan Drive CONNECTED', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        driveStatus: 'CONNECTED',
+      });
+      const logWithAtt = {
+        ...dummyLogEntry,
+        attachments: [
+          {
+            id: 'att-2',
+            fileName: 'photo2.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 2000,
+            width: 1024,
+            height: 768,
+            position: 0,
+          },
+        ],
+      };
+      mockPrisma.logEntry.findFirst.mockResolvedValue(logWithAtt);
+
+      const result = await service.findOne(userId, dummyLogEntry.id);
+      expect(mockAttachmentsService.buildAttachmentUrl).toHaveBeenCalledWith(
+        'att-2',
+        userId,
+      );
+      expect(result.attachments[0]?.url).toContain('att-2');
     });
   });
 
@@ -184,6 +249,15 @@ describe('LogsService', () => {
       await expect(
         service.update(userId, dummyLogEntry.id, { date: '2026-11-02' }),
       ).rejects.toThrow(DomainException);
+    });
+
+    it('harus melempar kembali error tak terduga selain P2002 saat update', async () => {
+      const genericError = new Error('DB write failed');
+      mockPrisma.logEntry.updateMany.mockRejectedValue(genericError);
+
+      await expect(
+        service.update(userId, dummyLogEntry.id, { description: 'Updated' }),
+      ).rejects.toThrow('DB write failed');
     });
   });
 
@@ -268,6 +342,135 @@ describe('LogsService', () => {
       expect(result.data).toHaveLength(0);
       expect(result.meta.total).toBe(0);
       expect(result.meta.totalPages).toBe(0);
+    });
+
+    it('harus menyaring berdasarkan query from saja', async () => {
+      mockPrisma.$transaction.mockResolvedValue([1, [dummyLogEntry]]);
+
+      await service.findAll(userId, { from: '2026-11-01' });
+
+      expect(mockPrisma.logEntry.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId,
+          date: { gte: expect.any(Date) },
+        }),
+      });
+    });
+
+    it('harus menyaring berdasarkan query to saja', async () => {
+      mockPrisma.$transaction.mockResolvedValue([1, [dummyLogEntry]]);
+
+      await service.findAll(userId, { to: '2026-11-30' });
+
+      expect(mockPrisma.logEntry.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId,
+          date: { lte: expect.any(Date) },
+        }),
+      });
+    });
+
+    it('harus menyaring berdasarkan query from dan to sekaligus', async () => {
+      mockPrisma.$transaction.mockResolvedValue([1, [dummyLogEntry]]);
+
+      await service.findAll(userId, {
+        from: '2026-11-01',
+        to: '2026-11-30',
+      });
+
+      expect(mockPrisma.logEntry.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId,
+          date: { gte: expect.any(Date), lte: expect.any(Date) },
+        }),
+      });
+    });
+  });
+
+  describe('stats', () => {
+    it('harus mengembalikan statistik bulanan dan total seluruh waktu yang di-scope userId', async () => {
+      const monthLogs = [
+        { date: new Date('2026-11-03T00:00:00.000Z') },
+        { date: new Date('2026-11-05T00:00:00.000Z') },
+        { date: new Date('2026-11-12T00:00:00.000Z') },
+      ];
+      mockPrisma.$transaction.mockResolvedValue([
+        10, // totalAllTime
+        monthLogs,
+      ]);
+
+      const result = await service.stats(userId, '2026-11');
+
+      expect(result).toEqual({
+        month: '2026-11',
+        totalThisMonth: 3,
+        totalAllTime: 10,
+        loggedDates: ['2026-11-03', '2026-11-05', '2026-11-12'],
+      });
+
+      expect(mockPrisma.logEntry.count).toHaveBeenCalledWith({
+        where: { userId },
+      });
+      expect(mockPrisma.logEntry.findMany).toHaveBeenCalledWith({
+        where: {
+          userId,
+          date: {
+            gte: new Date('2026-11-01T00:00:00.000Z'),
+            lt: new Date('2026-12-01T00:00:00.000Z'),
+          },
+        },
+        select: {
+          date: true,
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      });
+    });
+
+    it('harus menangani pergantian tahun pada bulan Desember (12 -> 01 tahun depan)', async () => {
+      mockPrisma.$transaction.mockResolvedValue([
+        5,
+        [{ date: new Date('2026-12-31T00:00:00.000Z') }],
+      ]);
+
+      const result = await service.stats(userId, '2026-12');
+
+      expect(result.month).toBe('2026-12');
+      expect(result.totalThisMonth).toBe(1);
+      expect(result.loggedDates).toEqual(['2026-12-31']);
+
+      expect(mockPrisma.logEntry.findMany).toHaveBeenCalledWith({
+        where: {
+          userId,
+          date: {
+            gte: new Date('2026-12-01T00:00:00.000Z'),
+            lt: new Date('2027-01-01T00:00:00.000Z'),
+          },
+        },
+        select: {
+          date: true,
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      });
+    });
+
+    it('harus mengembalikan array loggedDates kosong jika tidak ada logbook di bulan tersebut', async () => {
+      mockPrisma.$transaction.mockResolvedValue([
+        7, // totalAllTime
+        [], // monthLogs kosong
+      ]);
+
+      const result = await service.stats(userId, '2026-05');
+
+      expect(result).toEqual({
+        month: '2026-05',
+        totalThisMonth: 0,
+        totalAllTime: 7,
+        loggedDates: [],
+      });
     });
   });
 });

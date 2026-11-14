@@ -38,10 +38,13 @@ import {
   createLogSchema,
   dateParamSchema,
   listLogsQuerySchema,
+  logStatsQuerySchema,
   updateLogSchema,
   type CreateLogDto,
   type DateParam,
   type ListLogsQuery,
+  type LogStats,
+  type LogStatsQuery,
   type UpdateLogDto,
 } from './dto/log.schema.js';
 import type { LogResponse, PaginatedLogsResponse } from './logs.mapper.js';
@@ -155,6 +158,46 @@ export class LogsController {
     @Query({ schema: listLogsQuerySchema }) query: ListLogsQuery,
   ): Promise<PaginatedLogsResponse> {
     return this.logsService.findAll(user.userId, query);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary:
+      'Mengambil ringkasan statistik logbook bulanan dan total seluruh waktu',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: true,
+    type: String,
+    example: '2026-11',
+    description: 'Bulan dalam format YYYY-MM',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistik logbook bulanan dan seluruh waktu',
+    schema: {
+      type: 'object',
+      properties: {
+        month: { type: 'string', example: '2026-11' },
+        totalThisMonth: { type: 'number', example: 12 },
+        totalAllTime: { type: 'number', example: 45 },
+        loggedDates: {
+          type: 'array',
+          items: { type: 'string', example: '2026-11-03' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Parameter month tidak valid atau hilang',
+  })
+  @ApiResponse({ status: 401, description: 'Access token tidak valid' })
+  stats(
+    @CurrentUser() user: CurrentUserData,
+    @Query({ schema: logStatsQuerySchema }) query: LogStatsQuery,
+  ): Promise<LogStats> {
+    return this.logsService.stats(user.userId, query.month);
   }
 
   @Get('by-date/:date')
