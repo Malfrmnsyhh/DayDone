@@ -45,10 +45,12 @@ export class AuthService {
 
   /**
    * Menukarkan kode Google OAuth, upsert user, dan menerbitkan JWT access token serta sesi DayDone.
+   * Bila platform WEB menyertakan oldRefreshToken (mis. reconnect Drive), sesi lama dicabut setelah sesi baru dibuat.
    */
   async googleLogin(
     dto: GoogleLoginDto,
     userAgent?: string,
+    oldRefreshToken?: string,
   ): Promise<AuthResponse & { rawSessionRefreshToken: string }> {
     const googleProfile = await this.googleOAuthService.exchangeCode(
       dto.code,
@@ -124,6 +126,17 @@ export class AuthService {
         dto.platform as ClientPlatform,
         userAgent,
       );
+
+    // Cabut sesi lama bila ada (misal reconnect Drive di platform WEB dengan cookie daydone_rt)
+    if (dto.platform === 'WEB' && oldRefreshToken) {
+      try {
+        await this.sessionsService.revokeSession(oldRefreshToken);
+      } catch (err: unknown) {
+        this.logger.warn(
+          `Gagal mencabut sesi lama saat reconnect Drive untuk user ${user.id}: ${String((err as Error)?.message)}`,
+        );
+      }
+    }
 
     // Terbitkan JWT access token
     const { accessToken, accessTokenExpiresAt } = this.generateAccessToken(

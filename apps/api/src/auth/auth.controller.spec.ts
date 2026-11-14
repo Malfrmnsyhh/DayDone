@@ -64,9 +64,11 @@ describe('AuthController', () => {
   describe('googleLogin', () => {
     it('untuk platform WEB: pasang cookie daydone_rt dan tidak menyertakan refreshToken di body', async () => {
       const res = createMockResponse();
+      const req = { cookies: {} } as any;
       const result = await controller.googleLogin(
         { code: 'google-code-123', platform: 'WEB' },
         'test-browser',
+        req,
         res as unknown as Response,
       );
 
@@ -83,19 +85,48 @@ describe('AuthController', () => {
       expect(result.accessToken).toBe('jwt-access-token');
       expect(result.user).toEqual(mockUser);
       expect(result.refreshToken).toBeUndefined();
+      expect(mockAuthService.googleLogin).toHaveBeenCalledWith(
+        { code: 'google-code-123', platform: 'WEB' },
+        'test-browser',
+        undefined,
+      );
     });
 
-    it('untuk platform MOBILE: menyertakan refreshToken di body dan tidak memasang cookie', async () => {
+    it('untuk platform WEB: meneruskan cookie daydone_rt lama ke service untuk dicabut (reconnect Drive)', async () => {
       const res = createMockResponse();
+      const req = { cookies: { daydone_rt: 'old-cookie-token' } } as any;
+      await controller.googleLogin(
+        { code: 'google-code-reconnect', platform: 'WEB' },
+        'test-browser',
+        req,
+        res as unknown as Response,
+      );
+
+      expect(mockAuthService.googleLogin).toHaveBeenCalledWith(
+        { code: 'google-code-reconnect', platform: 'WEB' },
+        'test-browser',
+        'old-cookie-token',
+      );
+    });
+
+    it('untuk platform MOBILE: menyertakan refreshToken di body dan tidak memasang cookie atau meneruskan cookie', async () => {
+      const res = createMockResponse();
+      const req = { cookies: { daydone_rt: 'some-cookie' } } as any;
       const result = await controller.googleLogin(
         { code: 'google-code-123', platform: 'MOBILE' },
         'test-mobile-app',
+        req,
         res as unknown as Response,
       );
 
       expect(res.cookie).not.toHaveBeenCalled();
       expect(result.refreshToken).toBe('session-rt-123');
       expect(result.accessToken).toBe('jwt-access-token');
+      expect(mockAuthService.googleLogin).toHaveBeenCalledWith(
+        { code: 'google-code-123', platform: 'MOBILE' },
+        'test-mobile-app',
+        undefined,
+      );
     });
   });
 

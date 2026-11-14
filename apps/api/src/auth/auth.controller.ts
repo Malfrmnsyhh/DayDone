@@ -146,9 +146,17 @@ export class AuthController {
   async googleLogin(
     @Body({ schema: googleLoginSchema }) dto: GoogleLoginDto,
     @Headers('user-agent') userAgent: string | undefined,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
-    const result = await this.authService.googleLogin(dto, userAgent);
+    const oldRefreshToken =
+      dto.platform === 'WEB' ? req.cookies?.daydone_rt : undefined;
+
+    const result = await this.authService.googleLogin(
+      dto,
+      userAgent,
+      oldRefreshToken,
+    );
 
     if (dto.platform === 'WEB') {
       res.cookie(

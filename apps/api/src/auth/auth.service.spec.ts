@@ -197,6 +197,51 @@ describe('AuthService', () => {
 
       expect(res.user.driveStatus).toBe(DriveStatus.NOT_CONNECTED);
     });
+
+    it('mencabut sesi lama bila platform WEB membawa oldRefreshToken (reconnect Drive)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(dummyUser);
+      mockPrisma.user.upsert.mockResolvedValue(dummyUser);
+
+      const res = await service.googleLogin(
+        { code: 'reconnect-code', platform: 'WEB' },
+        'browser-agent',
+        'old-cookie-rt',
+      );
+
+      expect(res.accessToken).toBe('dummy.jwt.token');
+      expect(mockSessions.createSession).toHaveBeenCalled();
+      expect(mockSessions.revokeSession).toHaveBeenCalledWith('old-cookie-rt');
+    });
+
+    it('tetap berhasil login bila pencabutan sesi lama gagal (best-effort)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(dummyUser);
+      mockPrisma.user.upsert.mockResolvedValue(dummyUser);
+      mockSessions.revokeSession.mockRejectedValueOnce(
+        new Error('DB revoke error'),
+      );
+
+      const res = await service.googleLogin(
+        { code: 'reconnect-code', platform: 'WEB' },
+        'browser-agent',
+        'old-cookie-rt',
+      );
+
+      expect(res.accessToken).toBe('dummy.jwt.token');
+      expect(mockSessions.revokeSession).toHaveBeenCalledWith('old-cookie-rt');
+    });
+
+    it('tidak mencabut sesi lama bila platform bukan WEB meskipun oldRefreshToken ada', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(dummyUser);
+      mockPrisma.user.upsert.mockResolvedValue(dummyUser);
+
+      await service.googleLogin(
+        { code: 'mobile-code', platform: 'MOBILE' },
+        'mobile-agent',
+        'some-rt',
+      );
+
+      expect(mockSessions.revokeSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('refresh', () => {
