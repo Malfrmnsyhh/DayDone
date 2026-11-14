@@ -356,7 +356,7 @@ describe('Attachments & Storage Integration (e2e)', () => {
       const logRes = await request(app.getHttpServer())
         .post('/api/v1/logs')
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ date: '2026-10-24', description: 'Log delete test' });
+        .send({ date: '2026-10-25', description: 'Log delete test' });
       logId = logRes.body.id;
 
       const attRes = await request(app.getHttpServer())
