@@ -10,6 +10,18 @@ describe('DashboardPage Component', () => {
 
   it('menampilkan daftar logbook dan kartu hari ini saat data tersedia', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/logs/stats')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            month: '2026-11',
+            totalThisMonth: 0,
+            totalAllTime: 0,
+            loggedDates: [],
+          }),
+        };
+      }
       if (url.includes('/logs/by-date/')) {
         return {
           ok: true,
@@ -114,6 +126,18 @@ describe('DashboardPage Component', () => {
 
   it('menampilkan EmptyState saat daftar logbook kosong', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/logs/stats')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            month: '2026-11',
+            totalThisMonth: 0,
+            totalAllTime: 0,
+            loggedDates: [],
+          }),
+        };
+      }
       if (url.includes('/logs/by-date/')) {
         return {
           ok: false,
@@ -145,6 +169,18 @@ describe('DashboardPage Component', () => {
 
   it('menampilkan ErrorState dengan tombol coba lagi bila API error', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/logs/stats')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            month: '2026-11',
+            totalThisMonth: 0,
+            totalAllTime: 0,
+            loggedDates: [],
+          }),
+        };
+      }
       if (url.includes('/logs/by-date/')) {
         return {
           ok: false,
@@ -175,6 +211,18 @@ describe('DashboardPage Component', () => {
 
   it('thumbnail lampiran fallback ke placeholder bila gambar gagal dimuat (onError)', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/logs/stats')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            month: '2026-11',
+            totalThisMonth: 0,
+            totalAllTime: 0,
+            loggedDates: [],
+          }),
+        };
+      }
       if (url.includes('/logs/by-date/')) {
         return { ok: false, status: 404, json: async () => ({}) };
       }

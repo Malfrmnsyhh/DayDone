@@ -6,6 +6,7 @@ import { ListSkeleton } from '../components/common/loading-skeleton.js';
 import { EmptyState } from '../components/dashboard/empty-state.js';
 import { LogCard } from '../components/dashboard/log-card.js';
 import { LogFilterBar } from '../components/dashboard/log-filter-bar.js';
+import { MonthStatsCard } from '../components/dashboard/month-stats-card.js';
 import { Pagination } from '../components/dashboard/pagination.js';
 import { TodayCard } from '../components/dashboard/today-card.js';
 import { DriveBanner } from '../components/drive/drive-banner.js';
@@ -50,6 +51,9 @@ export function DashboardPage() {
 
       {/* Kartu Hari Ini */}
       <TodayCard />
+
+      {/* Ringkasan Statistik Bulan Berjalan (FR-13) */}
+      <MonthStatsCard />
 
       {/* Header Daftar Logbook */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
