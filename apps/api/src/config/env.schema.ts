@@ -74,6 +74,10 @@ const envSchema = z
     SWAGGER_ENABLED: z
       .union([z.boolean(), z.enum(['true', 'false'])])
       .optional(),
+
+    // Observability (opsional)
+    OBSERVE_APP_KEY: z.string().optional(),
+    OBSERVE_APP_SECRET: z.string().optional(),
   })
   .refine(
     (data) => !(data.NODE_ENV === 'production' && data.COOKIE_SECURE === false),

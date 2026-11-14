@@ -29,6 +29,18 @@ describe('validateEnv', () => {
     expect(env.COOKIE_SECURE).toBe(true);
     expect(env.TRUST_PROXY).toBe(0);
     expect(env.SWAGGER_ENABLED).toBe(true);
+    expect(env.OBSERVE_APP_KEY).toBeUndefined();
+    expect(env.OBSERVE_APP_SECRET).toBeUndefined();
+  });
+
+  it('menerima OBSERVE_APP_KEY dan OBSERVE_APP_SECRET bila diisi', () => {
+    const env = validateEnv({
+      ...validConfig,
+      OBSERVE_APP_KEY: 'test-app-key',
+      OBSERVE_APP_SECRET: 'test-app-secret',
+    });
+    expect(env.OBSERVE_APP_KEY).toBe('test-app-key');
+    expect(env.OBSERVE_APP_SECRET).toBe('test-app-secret');
   });
 
   it('mengatur SWAGGER_ENABLED default false di production bila tidak diisi', () => {
