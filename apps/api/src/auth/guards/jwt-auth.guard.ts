@@ -1,13 +1,15 @@
 import {
   type CanActivate,
   type ExecutionContext,
+  HttpStatus,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator.js';
+import { DomainException } from '../../common/errors/domain.exception.js';
+import { ErrorCode } from '../../common/errors/error-codes.js';
 import { SessionsService } from '../sessions/sessions.service.js';
 
 interface JwtPayload {
@@ -37,8 +39,10 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException(
+      throw new DomainException(
+        HttpStatus.UNAUTHORIZED,
         'Header Authorization: Bearer <token> wajib disertakan',
+        ErrorCode.SESSION_EXPIRED,
       );
     }
 
@@ -51,20 +55,28 @@ export class JwtAuthGuard implements CanActivate {
         algorithms: ['HS256'],
       });
     } catch {
-      throw new UnauthorizedException(
+      throw new DomainException(
+        HttpStatus.UNAUTHORIZED,
         'Token akses tidak valid atau telah kedaluwarsa',
+        ErrorCode.SESSION_EXPIRED,
       );
     }
 
     if (!payload.sub || !payload.sid) {
-      throw new UnauthorizedException('Klaim token akses tidak lengkap');
+      throw new DomainException(
+        HttpStatus.UNAUTHORIZED,
+        'Klaim token akses tidak lengkap',
+        ErrorCode.SESSION_EXPIRED,
+      );
     }
 
     // 3. Verifikasi status sesi di database dan kepemilikan user
     const session = await this.sessionsService.validateSession(payload.sid);
     if (!session || session.userId !== payload.sub) {
-      throw new UnauthorizedException(
+      throw new DomainException(
+        HttpStatus.UNAUTHORIZED,
         'Sesi tidak valid, telah dicabut, atau pengguna sudah tidak ada',
+        ErrorCode.SESSION_EXPIRED,
       );
     }
 

@@ -1,7 +1,9 @@
-import { type ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, type ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 import type { JwtService } from '@nestjs/jwt';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DomainException } from '../../common/errors/domain.exception.js';
+import { ErrorCode } from '../../common/errors/error-codes.js';
 import type { SessionsService } from '../sessions/sessions.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
@@ -63,18 +65,48 @@ describe('JwtAuthGuard', () => {
   it('menolak bila header Authorization tidak ada atau tidak diawali Bearer', async () => {
     const context = mockContext({});
 
-    await expect(guard.canActivate(context)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(context)).rejects.toThrow(DomainException);
+    try {
+      await guard.canActivate(context);
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainException);
+      const domainErr = err as DomainException;
+      expect(domainErr.getStatus()).toBe(HttpStatus.UNAUTHORIZED);
+      expect(domainErr.code).toBe(ErrorCode.SESSION_EXPIRED);
+    }
   });
 
   it('menolak bila verifikasi JWT gagal (expired/invalid)', async () => {
     mockJwtService.verifyAsync.mockRejectedValue(new Error('jwt expired'));
     const context = mockContext({ authorization: 'Bearer invalid.token' });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(context)).rejects.toThrow(DomainException);
+    try {
+      await guard.canActivate(context);
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainException);
+      const domainErr = err as DomainException;
+      expect(domainErr.getStatus()).toBe(HttpStatus.UNAUTHORIZED);
+      expect(domainErr.code).toBe(ErrorCode.SESSION_EXPIRED);
+    }
+  });
+
+  it('menolak bila klaim token sub atau sid tidak lengkap', async () => {
+    mockJwtService.verifyAsync.mockResolvedValue({
+      sub: 'user-1',
+      // sid hilang
+    });
+    const context = mockContext({ authorization: 'Bearer valid.jwt' });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(DomainException);
+    try {
+      await guard.canActivate(context);
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainException);
+      const domainErr = err as DomainException;
+      expect(domainErr.getStatus()).toBe(HttpStatus.UNAUTHORIZED);
+      expect(domainErr.code).toBe(ErrorCode.SESSION_EXPIRED);
+    }
   });
 
   it('menolak bila sesi di database sudah tidak aktif (revoked/expired)', async () => {
@@ -86,9 +118,15 @@ describe('JwtAuthGuard', () => {
 
     const context = mockContext({ authorization: 'Bearer valid.jwt' });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(context)).rejects.toThrow(DomainException);
+    try {
+      await guard.canActivate(context);
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainException);
+      const domainErr = err as DomainException;
+      expect(domainErr.getStatus()).toBe(HttpStatus.UNAUTHORIZED);
+      expect(domainErr.code).toBe(ErrorCode.SESSION_EXPIRED);
+    }
   });
 
   it('berhasil memvalidasi dan melampirkan user ke request', async () => {

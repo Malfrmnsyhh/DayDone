@@ -49,7 +49,7 @@ Error validasi (`400`) mengembalikan `message` berupa array:
 | `DRIVE_STORAGE_FULL` | 507 | Drive pengguna penuh | Beri tahu pengguna |
 | `DRIVE_UNAVAILABLE` | 502 | Error dari Google | Coba lagi nanti |
 | `GOOGLE_AUTH_FAILED` | 401 | Code tidak valid/kedaluwarsa | Ulangi login |
-| `SESSION_EXPIRED` | 401 | Refresh token tidak valid | Arahkan ke login |
+| `SESSION_EXPIRED` | 401 | Token akses atau refresh token tidak valid / kedaluwarsa | Arahkan ke login |
 
 ### Paginasi
 
