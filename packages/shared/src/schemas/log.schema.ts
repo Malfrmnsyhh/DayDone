@@ -81,8 +81,21 @@ export const dateParamSchema = z.object({
   date: z.iso.date(),
 });
 
+export const logStatsQuerySchema = z.object({
+  month: z
+    .string({
+      error: 'Parameter month wajib diisi',
+    })
+    .regex(
+      /^\d{4}-(?:0[1-9]|1[0-2])$/,
+      'Format month harus YYYY-MM (contoh: 2026-11)',
+    ),
+});
+
 export type CreateLogDto = z.infer<typeof createLogSchema>;
 export type UpdateLogDto = z.infer<typeof updateLogSchema>;
 export type ListLogsQuery = z.infer<typeof listLogsQuerySchema>;
 export type DateParam = z.infer<typeof dateParamSchema>;
+export type LogStatsQuery = z.infer<typeof logStatsQuerySchema>;
+
 

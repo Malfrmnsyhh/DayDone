@@ -20,3 +20,11 @@ export interface LogListItem {
   updatedAt: string; // ISO 8601
 }
 
+export interface LogStats {
+  month: string; // YYYY-MM
+  totalThisMonth: number;
+  totalAllTime: number;
+  loggedDates: string[]; // ['YYYY-MM-DD', ...]
+}
+
+
