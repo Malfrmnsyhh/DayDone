@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatDateIndonesian,
   formatShortDateIndonesian,
+  getCurrentLocalMonthString,
+  getMissingWeekdays,
   getTodayLocalDateString,
   parseLocalDate,
 } from './date.js';
@@ -49,3 +51,47 @@ describe('Date Utilities (apps/web)', () => {
   });
 });
 
+describe('getMissingWeekdays (FR-13)', () => {
+  // November 2026: tanggal 1 = Minggu, 2 = Senin, 7–8 = Sabtu–Minggu
+
+  it('hari ini Senin di awal bulan: hanya hari Senin itu yang dihitung (Minggu dilewati)', () => {
+    expect(getMissingWeekdays('2026-11', [], '2026-11-02')).toEqual([
+      '2026-11-02',
+    ]);
+  });
+
+  it('melewati Sabtu/Minggu dan tanggal yang sudah punya logbook', () => {
+    const missing = getMissingWeekdays(
+      '2026-11',
+      ['2026-11-02', '2026-11-04'],
+      '2026-11-09',
+    );
+    expect(missing).toEqual([
+      '2026-11-03',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-11-09',
+    ]);
+  });
+
+  it('bulan yang sudah lewat (pergantian bulan) dihitung sampai akhir bulan', () => {
+    // Oktober 2026 punya 22 hari kerja; hari ini sudah November
+    const missing = getMissingWeekdays('2026-10', [], '2026-11-02');
+    expect(missing).toHaveLength(22);
+    expect(missing[0]).toBe('2026-10-01');
+    expect(missing.at(-1)).toBe('2026-10-30');
+  });
+
+  it('akhir tahun: Desember dihitung penuh saat hari ini sudah Januari', () => {
+    const missing = getMissingWeekdays('2026-12', [], '2027-01-04');
+    expect(missing.at(-1)).toBe('2026-12-31');
+  });
+
+  it('bulan mendatang menghasilkan daftar kosong', () => {
+    expect(getMissingWeekdays('2026-12', [], '2026-11-14')).toEqual([]);
+  });
+
+  it('getCurrentLocalMonthString memotong YYYY-MM dari tanggal lokal', () => {
+    expect(getCurrentLocalMonthString('2026-11-14')).toBe('2026-11');
+  });
+});
