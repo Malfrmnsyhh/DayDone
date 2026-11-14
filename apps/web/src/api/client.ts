@@ -16,6 +16,10 @@ let refreshPromise: Promise<string | null> | null = null;
 type AuthFailureListener = () => void;
 const authFailureListeners = new Set<AuthFailureListener>();
 
+// Subscriber callback untuk perubahan sesi/token (reaktivitas UI / useSyncExternalStore)
+type SessionListener = () => void;
+const sessionListeners = new Set<SessionListener>();
+
 export function getBaseUrl(): string {
   const url = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
   return url.replace(/\/$/, '');
@@ -29,14 +33,38 @@ export function getCurrentUser(): User | null {
   return currentUser;
 }
 
+export function subscribeSession(listener: SessionListener): () => void {
+  sessionListeners.add(listener);
+  return () => {
+    sessionListeners.delete(listener);
+  };
+}
+
+export function subscribeAccessToken(listener: SessionListener): () => void {
+  return subscribeSession(listener);
+}
+
+function notifySessionChange(): void {
+  for (const listener of sessionListeners) {
+    listener();
+  }
+}
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+  notifySessionChange();
+}
+
 export function setSession(token: string | null, user: User | null): void {
   accessToken = token;
   currentUser = user;
+  notifySessionChange();
 }
 
 export function clearSession(): void {
   accessToken = null;
   currentUser = null;
+  notifySessionChange();
 }
 
 export function onAuthFailure(listener: AuthFailureListener): () => void {
@@ -72,10 +100,8 @@ async function executeRefreshNetwork(): Promise<string | null> {
     }
 
     const data = (await res.json()) as AuthResponse;
-    accessToken = data.accessToken;
-    if (data.user) {
-      currentUser = data.user;
-    }
+    const nextUser = data.user ?? currentUser;
+    setSession(data.accessToken, nextUser);
     return data.accessToken;
   } catch {
     clearSession();
@@ -126,6 +152,24 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'headers'> {
   isRetry?: boolean;
 }
 
+function isAuthEndpoint(path: string): boolean {
+  return path.includes('/auth/');
+}
+
+function isCsrfProtectedEndpoint(path: string): boolean {
+  const cleanPath = path.split('?')[0].replace(/\/$/, '');
+  return cleanPath.endsWith('/auth/refresh') || cleanPath.endsWith('/auth/logout');
+}
+
+function isNonRefreshableAuthEndpoint(path: string): boolean {
+  const cleanPath = path.split('?')[0].replace(/\/$/, '');
+  return (
+    cleanPath.endsWith('/auth/google') ||
+    cleanPath.endsWith('/auth/refresh') ||
+    cleanPath.endsWith('/auth/logout')
+  );
+}
+
 /**
  * Fetch wrapper utama DayDone API.
  * Menangani injeksi token otomatis, proteksi CSRF, credentials cookie,
@@ -141,10 +185,6 @@ export async function apiFetch<T>(
     ? path
     : `${getBaseUrl()}${path.startsWith('/') ? '' : '/'}${path}`;
 
-  const isAuthEndpoint = path.includes('/auth/');
-  const isCsrfProtectedEndpoint =
-    path.endsWith('/auth/refresh') || path.endsWith('/auth/logout');
-
   const requestHeaders: Record<string, string> = { ...headers };
 
   // Set Content-Type JSON bila body bukan FormData
@@ -158,12 +198,12 @@ export async function apiFetch<T>(
   }
 
   // Sertakan header proteksi CSRF untuk endpoint sensitif auth
-  if (isCsrfProtectedEndpoint) {
+  if (isCsrfProtectedEndpoint(path)) {
     requestHeaders[CSRF_HEADER_NAME] = CSRF_HEADER_VALUE;
   }
 
-  // Rute auth wajib credentials: 'include' untuk cookie daydone_rt
-  const credentials = isAuthEndpoint ? 'include' : restOptions.credentials || 'same-origin';
+  // Rute auth wajib credentials: 'include' untuk cookie daydone_rt (termasuk saat login/reconnect Drive)
+  const credentials = isAuthEndpoint(path) ? 'include' : restOptions.credentials || 'same-origin';
 
   const res = await fetch(url, {
     ...restOptions,
@@ -173,10 +213,18 @@ export async function apiFetch<T>(
 
   // Tangani 401 Unauthorized
   if (res.status === 401) {
-    // Jangan refresh jika 401 berasal dari endpoint refresh, login, atau request retry
-    if (isAuthEndpoint || isRetry) {
+    // Jangan refresh jika 401 berasal dari endpoint non-refreshable (/auth/google, /auth/refresh, /auth/logout)
+    if (isNonRefreshableAuthEndpoint(path)) {
       const errData = await parseErrorPayload(res);
       clearSession();
+      throw new ApiError({ ...errData, statusCode: 401 });
+    }
+
+    // Bila pemanggilan retry tetap gagal 401, bersihkan sesi dan beri tahu failure
+    if (isRetry) {
+      const errData = await parseErrorPayload(res);
+      clearSession();
+      notifyAuthFailure();
       throw new ApiError({ ...errData, statusCode: 401 });
     }
 

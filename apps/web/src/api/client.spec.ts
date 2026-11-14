@@ -4,8 +4,10 @@ import {
   clearSession,
   getAccessToken,
   getCurrentUser,
+  onAuthFailure,
   refreshSession,
   setSession,
+  subscribeAccessToken,
 } from './client.js';
 
 describe('API Client (apps/web)', () => {
@@ -243,5 +245,272 @@ describe('API Client (apps/web)', () => {
     const token = await refreshSession();
     expect(token).toBe('token-no-locks');
     expect(getAccessToken()).toBe('token-no-locks');
+  });
+
+  it('401 di /auth/me memicu refresh dan mengulangi request dengan token baru', async () => {
+    let refreshCalls = 0;
+    let meCalls = 0;
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string, options: any) => {
+      if (url.includes('/auth/refresh')) {
+        refreshCalls++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            accessToken: 'token-refreshed-for-me',
+            user: {
+              id: 'u1',
+              email: 'test@example.com',
+              name: 'User Test',
+              avatarUrl: null,
+              driveStatus: 'CONNECTED',
+            },
+          }),
+        };
+      }
+
+      if (url.includes('/auth/me')) {
+        meCalls++;
+        if (options?.headers?.Authorization !== 'Bearer token-refreshed-for-me') {
+          return {
+            ok: false,
+            status: 401,
+            json: async () => ({ error: 'Unauthorized', message: 'Token expired' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 'u1',
+            email: 'test@example.com',
+            name: 'User Test',
+            avatarUrl: null,
+            driveStatus: 'CONNECTED',
+          }),
+        };
+      }
+
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    setSession('old-expired-token', null);
+
+    const user = await apiFetch<{ id: string; email: string }>('/auth/me');
+
+    expect(meCalls).toBe(2); // 1 kali gagal 401 + 1 kali retry berhasil
+    expect(refreshCalls).toBe(1);
+    expect(user.email).toBe('test@example.com');
+    expect(getAccessToken()).toBe('token-refreshed-for-me');
+  });
+
+  it('PARALEL 401 /auth/me: pemanggilan /auth/me paralel yang kena 401 hanya memicu 1 kali refresh', async () => {
+    let refreshCalls = 0;
+    let meCalls = 0;
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string, options: any) => {
+      if (url.includes('/auth/refresh')) {
+        refreshCalls++;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            accessToken: 'token-parallel-me',
+            user: {
+              id: 'u1',
+              email: 'parallel@example.com',
+              name: 'Parallel User',
+              avatarUrl: null,
+              driveStatus: 'CONNECTED',
+            },
+          }),
+        };
+      }
+
+      if (url.includes('/auth/me')) {
+        meCalls++;
+        if (options?.headers?.Authorization !== 'Bearer token-parallel-me') {
+          return {
+            ok: false,
+            status: 401,
+            json: async () => ({ error: 'Unauthorized', message: 'Token expired' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'u1', email: 'parallel@example.com', name: 'Parallel User' }),
+        };
+      }
+
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    setSession('old-expired-token', null);
+
+    const [user1, user2] = await Promise.all([
+      apiFetch<{ id: string; email: string }>('/auth/me'),
+      apiFetch<{ id: string; email: string }>('/auth/me'),
+    ]);
+
+    expect(refreshCalls).toBe(1); // Tepat 1 kali refresh untuk kedua request paralel
+    expect(meCalls).toBe(4); // 2 kali gagal 401 + 2 kali retry berhasil
+    expect(user1.id).toBe('u1');
+    expect(user2.id).toBe('u1');
+  });
+
+  it('401 di /auth/me: memicu notifyAuthFailure bila retry tetap gagal 401', async () => {
+    const authFailureSpy = vi.fn();
+    const unsub = onAuthFailure(authFailureSpy);
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/auth/refresh')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ accessToken: 'new-token' }),
+        };
+      }
+      if (url.includes('/auth/me')) {
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({ error: 'Unauthorized', message: 'Still invalid' }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    setSession('old-token', null);
+
+    await expect(apiFetch('/auth/me')).rejects.toThrow();
+
+    expect(authFailureSpy).toHaveBeenCalledTimes(1);
+    expect(getAccessToken()).toBeNull();
+    unsub();
+  });
+
+  it('401 di /auth/refresh tidak memicu loop refresh dan langsung membersihkan sesi', async () => {
+    let refreshCalls = 0;
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/auth/refresh')) {
+        refreshCalls++;
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({
+            error: 'Unauthorized',
+            message: 'Refresh token invalid or expired',
+            code: 'SESSION_EXPIRED',
+          }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    setSession('some-token', {
+      id: 'u1',
+      email: 'test@example.com',
+      name: 'Test',
+      avatarUrl: null,
+      driveStatus: 'CONNECTED',
+    });
+
+    await expect(apiFetch('/auth/refresh', { method: 'POST' })).rejects.toThrow();
+
+    // Pastikan tidak ada loop / rekursi refresh; fetch hanya dipanggil tepat 1 kali
+    expect(refreshCalls).toBe(1);
+    expect(getAccessToken()).toBeNull();
+    expect(getCurrentUser()).toBeNull();
+  });
+
+  it('401 di /auth/google dan /auth/logout tidak mencoba refresh', async () => {
+    let refreshCalls = 0;
+    let googleCalls = 0;
+    let logoutCalls = 0;
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/auth/refresh')) {
+        refreshCalls++;
+        return { ok: true, status: 200, json: async () => ({ accessToken: 'new-token' }) };
+      }
+      if (url.includes('/auth/google')) {
+        googleCalls++;
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({ error: 'Unauthorized', code: 'GOOGLE_AUTH_FAILED' }),
+        };
+      }
+      if (url.includes('/auth/logout')) {
+        logoutCalls++;
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({ error: 'Unauthorized' }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      apiFetch('/auth/google', { method: 'POST', body: JSON.stringify({}) }),
+    ).rejects.toThrow();
+    await expect(
+      apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({}) }),
+    ).rejects.toThrow();
+
+    expect(googleCalls).toBe(1);
+    expect(logoutCalls).toBe(1);
+    expect(refreshCalls).toBe(0); // Sama sekali tidak memicu refresh
+  });
+
+  it('request /auth/google menyertakan credentials: "include" untuk alur reconnect Drive', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ accessToken: 'new-google-token' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetch('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ code: 'auth-code', platform: 'WEB', redirectUri: 'postmessage' }),
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, options] = fetchMock.mock.calls[0];
+    expect(options.credentials).toBe('include');
+  });
+
+  it('subscribeAccessToken memberi tahu listener saat setSession dan clearSession dipanggil', () => {
+    const listener = vi.fn();
+    const unsub = subscribeAccessToken(listener);
+
+    setSession('token-abc', {
+      id: 'u1',
+      email: 'a@b.com',
+      name: 'A',
+      avatarUrl: null,
+      driveStatus: 'CONNECTED',
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    clearSession();
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    unsub();
+    setSession('token-xyz', null);
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });
