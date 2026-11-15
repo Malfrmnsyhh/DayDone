@@ -68,12 +68,12 @@ export function GoogleLoginButton() {
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" aria-hidden="true" />
             <span>Menghubungkan akun Google...</span>
           </>
         ) : (
           <>
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -97,8 +97,8 @@ export function GoogleLoginButton() {
       </button>
 
       {errorMessage && (
-        <div className="flex items-start space-x-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
+        <div role="alert" className="flex items-start space-x-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-500" aria-hidden="true" />
           <span>{errorMessage}</span>
         </div>
       )}

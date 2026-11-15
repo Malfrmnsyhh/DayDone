@@ -34,13 +34,13 @@ export function LoginPage() {
 
             <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-600 space-y-2 border border-slate-100">
               <div className="flex items-start space-x-2">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" aria-hidden="true" />
                 <span>
                   <strong>Akses Aman & Terbatas:</strong> Izin Google Drive hanya digunakan untuk membuat folder aplikasi <code>DayDone</code> (scope <code>drive.file</code>).
                 </span>
               </div>
               <div className="flex items-start space-x-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-600 mt-0.5" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-600 mt-0.5" aria-hidden="true" />
                 <span>
                   Foto logbook tidak pernah disimpan permanen di server DayDone, melainkan langsung ke Google Drive Anda.
                 </span>

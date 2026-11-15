@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 14 November 2026 (FR-13 statistik bulanan API + web, scaffold mobile Expo M8-1)
+**Terakhir diperbarui:** 15 November 2026 (audit aksesibilitas NFR-08 & test login-page, eliminasi act warning web test, sinkronisasi skrip mobile)
 
 ## Status per milestone
 
@@ -216,7 +216,10 @@
 - [x] M8-1 (sebagian): `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal.
 - [ ] M8-1 AC "development build jalan di Android" belum diverifikasi di perangkat/emulator.
 - [ ] M8-2 menunggu: Android OAuth client ID, SHA-1 (debug & EAS), akun Expo.
-- [ ] Prompt "test login-page + audit aksesibilitas web (NFR-08)" belum dikerjakan.
+- [x] Audit aksesibilitas login page & Google button (NFR-08): atribut `role="alert"`, `aria-hidden="true"`, dan `focusable="false"`.
+- [x] Unit test komprehensif `LoginPage` & `GoogleLoginButton` (`apps/web/src/pages/login-page.spec.tsx` — 7 tests lolos 100%).
+- [x] Eliminasi seluruh peringatan `act(...)` pada `auth-context.spec.tsx` (wrapping `clearSession` dalam `act` di `afterEach`).
+- [x] Sinkronisasi skrip native run `expo run:android` dan `expo run:ios` di `apps/mobile/package.json`.
 
 ## Task berikutnya untuk agent
 

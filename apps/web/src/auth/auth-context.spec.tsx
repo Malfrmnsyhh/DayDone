@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession, setSession } from '../api/client.js';
 import { AuthProvider, useAuth } from './auth-context.js';
@@ -36,7 +37,9 @@ describe('AuthContext reactivity', () => {
   });
 
   afterEach(() => {
-    clearSession();
+    act(() => {
+      clearSession();
+    });
   });
 
   it('status isAuthenticated berubah secara reaktif saat token dibersihkan (clearSession)', () => {
@@ -152,7 +155,10 @@ describe('AuthContext reactivity', () => {
       </AuthProvider>,
     );
 
-    expect(await screen.findByTestId('auth-status')).toHaveTextContent('AUTHENTICATED');
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('auth-status')).toHaveTextContent('AUTHENTICATED');
     expect(screen.getByTestId('user-email')).toHaveTextContent('bootstrapped@example.com');
   });
 });
