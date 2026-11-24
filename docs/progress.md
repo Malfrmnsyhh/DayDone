@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 15 November 2026 (audit aksesibilitas NFR-08 & test login-page, eliminasi act warning web test, sinkronisasi skrip mobile)
+**Terakhir diperbarui:** 24 November 2026 (M8-1 selesai 100% — development build Android terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G)
 
 ## Status per milestone
 
@@ -16,7 +16,7 @@
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
 | M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
-| M8 Aplikasi mobile | Berjalan — M8-1 scaffold Expo selesai (belum diuji di perangkat Android); M8-2 menunggu kredensial Android OAuth |
+| M8 Aplikasi mobile | Berjalan — M8-1 selesai (terverifikasi di Android); M8-2 menunggu kredensial Android OAuth |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
@@ -213,9 +213,9 @@
 ### FR-13 Statistik bulanan & M8-1 Scaffold Mobile (14 November 2026)
 - [x] `GET /api/v1/logs/stats?month=YYYY-MM` → `{ month, totalThisMonth, totalAllTime, loggedDates }`, di-scope `userId`, schema `logStatsQuerySchema` di `@daydone/shared`, spec diperbarui. Unit + e2e (lintas user, 400, 401) lolos; branch coverage `logs.service.ts` 97,9%.
 - [x] Web: kartu "Ringkasan <bulan>" di dashboard — logbook bulan ini, total logbook, dan hari kerja (Sen–Jum) tanpa logbook sampai hari ini (dihitung di client dengan tanggal lokal). Setiap hari kosong adalah tautan ke `/logs/new?date=YYYY-MM-DD`; form buat logbook membaca `?date=`. Stats ikut ter-invalidasi karena query key berada di bawah prefix `['logs']`.
-- [x] M8-1 (sebagian): `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal.
-- [ ] M8-1 AC "development build jalan di Android" belum diverifikasi di perangkat/emulator.
-- [ ] M8-2 menunggu: Android OAuth client ID, SHA-1 (debug & EAS), akun Expo.
+- [x] M8-1: `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal & prasyarat Windows Android.
+- [x] M8-1 AC "development build jalan di Android" terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G (`SM_A336E`) via USB (`adb reverse` port 3000 & 8081), APK terpasang, Metro mengirim 1.432 modul tanpa error, dan layar login DayDone tampil normal.
+- [ ] M8-2 menunggu: Android OAuth client ID (package `app.daydone.mobile` + SHA-1 debug & EAS), akun Expo.
 - [x] Audit aksesibilitas login page & Google button (NFR-08): atribut `role="alert"`, `aria-hidden="true"`, dan `focusable="false"`.
 - [x] Unit test komprehensif `LoginPage` & `GoogleLoginButton` (`apps/web/src/pages/login-page.spec.tsx` — 7 tests lolos 100%).
 - [x] Eliminasi seluruh peringatan `act(...)` pada `auth-context.spec.tsx` (wrapping `clearSession` dalam `act` di `afterEach`).
@@ -287,6 +287,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-14 — Q1 diputuskan Expo dan Q2 satu entri per hari — dicatat di `docs/01-prd.md` bagian 12.
 - 2026-11-14 — `/logs/stats` tidak menghitung hari kosong di server — server tidak tahu tanggal lokal pengguna; client menghitung dari `loggedDates` (aturan tanggal AGENTS #4).
 - 2026-11-14 — Override `minimatch >=11.0.1` dipindah ke `pnpm-workspace.yaml` — pnpm 12 membaca overrides dari file itu; menutup advisory moderate lewat `@expo/fingerprint` (diuji: fingerprint tetap berjalan).
+- 2026-11-24 — Pin CMake `3.31.6` (Ninja `1.12+`) via Expo config plugin `./plugins/with-android-cmake` dan kecualikan autolinking Android untuk `react-native-reanimated` & `react-native-gesture-handler` yang belum dipakai di `apps/mobile/react-native.config.js` — mengatasi error batas `MAX_PATH` 260 karakter Ninja `1.10.2` bawaan AGP di Windows monorepo pnpm, sekaligus mempercepat waktu kompilasi native tanpa mengubah isolasi `pnpm-workspace.yaml`.
 
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 

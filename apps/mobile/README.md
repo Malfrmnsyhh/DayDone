@@ -10,9 +10,21 @@ Aplikasi mobile memerlukan koneksi ke backend API DayDone (`apps/api`).
 
 > **Penting untuk HP Fisik & Emulator:**
 > `localhost` di dalam HP merujuk ke HP itu sendiri, bukan ke laptop Anda. 
-> - **HP Fisik:** Gunakan alamat **IP lokal laptop** pada jaringan Wi-Fi yang sama (contoh: `http://192.168.1.15:3000/api/v1`).
+> - **HP Fisik via USB (Direkomendasikan):** Gunakan `adb reverse tcp:3000 tcp:3000` dan `adb reverse tcp:8081 tcp:8081`, lalu pakai `EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1` (tidak terpengaruh IP Wi-Fi atau Windows Firewall).
+> - **HP Fisik via Wi-Fi:** Gunakan alamat **IP lokal laptop** pada jaringan Wi-Fi yang sama (contoh: `http://192.168.1.15:3000/api/v1`).
 > - **Android Emulator:** Dapat menggunakan alias loopback default Android `http://10.0.2.2:3000/api/v1` atau IP lokal laptop.
 > - **Tunneling (Alternatif):** Dapat menggunakan ngrok / Cloudflare Tunnel bila berada di jaringan yang mengisolasi koneksi antar-perangkat.
+
+### Prasyarat Build Native Android di Windows (1x Setup)
+
+Karena monorepo `pnpm` menghasilkan path `node_modules/.pnpm/...` yang cukup panjang, CMake bawaan Android Gradle Plugin (`3.22.1` / Ninja `1.10`) akan gagal terkena batas `MAX_PATH` 260 karakter di Windows. Sebelum menjalankan `pnpm --filter mobile android`, pastikan:
+
+1. **Android SDK & CMake `3.31.6`** (membawa Ninja `1.12+`) sudah terpasang lewat Android Studio → *SDK Manager → SDK Tools → Show Package Details → CMake → 3.31.6*. Plugin `./plugins/with-android-cmake` otomatis menyetel versi CMake ini saat `expo prebuild`.
+2. **Environment variables Windows** (`ANDROID_HOME`, `JAVA_HOME`, dan `Path` untuk `platform-tools`, `emulator`, `jbr\bin`) sudah terdaftar.
+3. **Win32 Long Paths aktif** (jalankan sekali di PowerShell Administrator):
+   ```powershell
+   New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+   ```
 
 ### Langkah-langkah:
 
