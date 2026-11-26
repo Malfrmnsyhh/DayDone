@@ -8,16 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth-store';
+import { formatDateIndonesian, getTodayLocalDateString } from '@/lib/date';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
 
-  const todayFormatted = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date());
+  const todayFormatted = formatDateIndonesian(getTodayLocalDateString());
 
   return (
     <SafeAreaView style={styles.safeArea}>

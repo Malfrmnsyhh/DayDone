@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 24 November 2026 (M8-1 selesai 100% — development build Android terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G)
+**Terakhir diperbarui:** 26 November 2026 (penambahan helper tanggal lokal mobile `apps/mobile/lib/date.ts` + unit test sebagai fondasi M8-3)
 
 ## Status per milestone
 
