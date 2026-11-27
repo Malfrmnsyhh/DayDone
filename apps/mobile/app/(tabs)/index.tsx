@@ -9,11 +9,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth-store';
 import { formatDateIndonesian, getTodayLocalDateString } from '@/lib/date';
+import { getDriveStatusInfo } from '@/lib/drive-status';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
 
   const todayFormatted = formatDateIndonesian(getTodayLocalDateString());
+  const driveInfo = getDriveStatusInfo(user?.driveStatus);
+  const isDriveWarning = driveInfo.tone === 'warning';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -53,6 +56,8 @@ export default function HomeScreen() {
               styles.primaryButton,
               pressed && styles.buttonPressed,
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tulis logbook cepat"
             onPress={() => {
               // Navigasi ke form logbook di M8-5
             }}>
@@ -61,12 +66,24 @@ export default function HomeScreen() {
         </View>
 
         {/* Card Info Integrasi Drive */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Status Google Drive</Text>
-          <Text style={styles.infoText}>
-            {user?.driveStatus === 'CONNECTED'
-              ? 'Terhubung — Foto dokumentasi akan otomatis tersimpan di folder DayDone Drive Anda.'
-              : 'Belum terhubung — Foto logbook membutuhkan izin akses Google Drive.'}
+        <View
+          style={[
+            styles.infoCard,
+            isDriveWarning && styles.infoCardWarning,
+          ]}>
+          <Text
+            style={[
+              styles.infoTitle,
+              isDriveWarning && styles.infoTitleWarning,
+            ]}>
+            {driveInfo.title}
+          </Text>
+          <Text
+            style={[
+              styles.infoText,
+              isDriveWarning && styles.infoTextWarning,
+            ]}>
+            {driveInfo.description}
           </Text>
         </View>
       </ScrollView>
@@ -176,15 +193,25 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#0284C7',
   },
+  infoCardWarning: {
+    backgroundColor: '#FFFBEB',
+    borderLeftColor: '#D97706',
+  },
   infoTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: '#0369A1',
     marginBottom: 4,
   },
+  infoTitleWarning: {
+    color: '#B45309',
+  },
   infoText: {
     fontSize: 12,
     color: '#0C4A6E',
     lineHeight: 18,
+  },
+  infoTextWarning: {
+    color: '#92400E',
   },
 });

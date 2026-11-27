@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 26 November 2026 (penambahan helper tanggal lokal mobile `apps/mobile/lib/date.ts` + unit test sebagai fondasi M8-3)
+**Terakhir diperbarui:** 27 November 2026 (perbaikan tampilan 3 status Google Drive termasuk `NEEDS_RECONNECT` di beranda mobile + unit test `lib/drive-status.ts`)
 
 ## Status per milestone
 
