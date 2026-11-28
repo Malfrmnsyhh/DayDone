@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { DriveReconnectBanner } from "@/components/drive-banner";
 import { useAuth } from "@/lib/auth-store";
 import {
   formatDateIndonesian,
@@ -19,7 +20,7 @@ import {
   getMissingWeekdays,
   getTodayLocalDateString,
 } from "@/lib/date";
-import { getDriveStatusInfo } from "@/lib/drive-status";
+import { getDriveStatusInfo, shouldShowDriveBanner } from "@/lib/drive-status";
 import { useLogByDate, useLogStats } from "@/lib/logs-api";
 
 export default function HomeScreen() {
@@ -33,7 +34,7 @@ export default function HomeScreen() {
   const todayFormatted = formatDateIndonesian(today);
   const monthLabel = formatMonthYearIndonesian(currentMonth);
   const driveInfo = getDriveStatusInfo(user?.driveStatus);
-  const isDriveWarning = driveInfo.tone === "warning";
+  const showReconnectBanner = shouldShowDriveBanner(user?.driveStatus);
 
   const {
     data: todayLog,
@@ -64,7 +65,7 @@ export default function HomeScreen() {
 
   const handleQuickWritePress = () => {
     router.push({
-      pathname: '/logs/new',
+      pathname: "/logs/new",
       params: { date: today },
     });
   };
@@ -101,6 +102,9 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.dateText}>{todayFormatted}</Text>
+
+        {/* Banner Rekoneksi Drive (muncul otomatis hanya saat NOT_CONNECTED / NEEDS_RECONNECT) */}
+        <DriveReconnectBanner />
 
         {/* Kartu Status Logbook Hari Ini */}
         <View style={styles.card}>
@@ -232,12 +236,13 @@ export default function HomeScreen() {
                         ]}
                         onPress={() =>
                           router.push({
-                            pathname: '/logs/new',
+                            pathname: "/logs/new",
                             params: { date: missingDate },
                           })
                         }
                         accessibilityRole="button"
-                        accessibilityLabel={`Tulis logbook tanggal ${formatShortDateIndonesian(missingDate)}`}>
+                        accessibilityLabel={`Tulis logbook tanggal ${formatShortDateIndonesian(missingDate)}`}
+                      >
                         <Text style={styles.missingChipText}>
                           + {formatShortDateIndonesian(missingDate)}
                         </Text>
@@ -250,24 +255,13 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Kartu Info Integrasi Drive */}
-        <View
-          style={[styles.infoCard, isDriveWarning && styles.infoCardWarning]}
-        >
-          <Text
-            style={[
-              styles.infoTitle,
-              isDriveWarning && styles.infoTitleWarning,
-            ]}
-          >
-            {driveInfo.title}
-          </Text>
-          <Text
-            style={[styles.infoText, isDriveWarning && styles.infoTextWarning]}
-          >
-            {driveInfo.description}
-          </Text>
-        </View>
+        {/* Kartu Info Integrasi Drive (tampil saat Drive terhubung; saat belum/perlu rekoneksi ditangani DriveReconnectBanner) */}
+        {!showReconnectBanner && (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>{driveInfo.title}</Text>
+            <Text style={styles.infoText}>{driveInfo.description}</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -451,33 +445,33 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
   },
   missingTitle: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: "700",
+    color: "#475569",
     marginBottom: 10,
   },
   missingChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   missingChip: {
     minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: "#FEF3C7",
     borderWidth: 1,
-    borderColor: '#FDE68A',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#FDE68A",
+    alignItems: "center",
+    justifyContent: "center",
   },
   missingChipText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#92400E',
+    fontWeight: "700",
+    color: "#92400E",
   },
   infoCard: {
     backgroundColor: "#F0F9FF",

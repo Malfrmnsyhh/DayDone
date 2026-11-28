@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { MAX_ATTACHMENTS } from '@daydone/shared';
+import { DriveReconnectBanner } from '@/components/drive-banner';
 import { useAuth } from '@/lib/auth-store';
 import {
   runSequentialUploadQueue,
@@ -338,16 +339,8 @@ export default function LogDetailScreen() {
             Format JPEG, PNG, atau WebP (maks. 10 MB/foto). Metadata EXIF & lokasi GPS otomatis dihapus saat unggah demi privasi.
           </Text>
 
-          {/* Peringatan status Drive belum terhubung */}
-          {!isDriveConnected && (
-            <View style={styles.driveWarningBox} accessibilityRole="alert">
-              <Text style={styles.driveWarningText}>
-                {user?.driveStatus === 'NEEDS_RECONNECT'
-                  ? 'Akses Google Drive perlu dihubungkan ulang agar foto dapat diunggah. Fitur rekoneksi Drive akan dilengkapi di M8-7.'
-                  : 'Google Drive belum terhubung. Unggah foto membutuhkan izin Google Drive.'}
-              </Text>
-            </View>
-          )}
+          {/* Banner Rekoneksi Google Drive (langsung bisa rekoneksi dari halaman detail) */}
+          <DriveReconnectBanner />
 
           {/* Tombol Tambah Foto (Kamera & Galeri) */}
           <View style={styles.uploadActionsRow}>
