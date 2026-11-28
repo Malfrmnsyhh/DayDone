@@ -1,19 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/lib/auth-store';
+import { requestGoogleServerAuthCode } from '@/lib/google-signin';
 
 export default function LoginScreen() {
-  const handleGoogleLoginPress = () => {
-    Alert.alert(
-      'Milestone M8-2',
-      'Integrasi Google Sign-In native sedang disiapkan untuk M8-2. Pemilik proyek perlu mendaftarkan Android OAuth Client ID dan SHA-1 di Google Cloud Console terlebih dahulu.',
-    );
+  const { loginWithGoogle } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleGoogleLoginPress = async () => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const serverAuthCode = await requestGoogleServerAuthCode();
+      if (!serverAuthCode) {
+        // Pengguna membatalkan dialog Google sendiri
+        return;
+      }
+
+      await loginWithGoogle(serverAuthCode);
+      // Jika sukses, RootLayoutNavigation di app/_layout.tsx
+      // otomatis mengarahkan user ke /(tabs)
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Gagal masuk dengan Google. Silakan coba lagi.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -30,21 +54,36 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.actionContainer}>
+          {errorMessage && (
+            <View style={styles.errorBox} accessibilityRole="alert">
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
           <Pressable
             style={({ pressed }) => [
               styles.googleButton,
-              pressed && styles.buttonPressed,
+              pressed && !isSubmitting && styles.buttonPressed,
+              isSubmitting && styles.buttonDisabled,
             ]}
             onPress={handleGoogleLoginPress}
+            disabled={isSubmitting}
             accessibilityRole="button"
             accessibilityLabel="Masuk dengan Google">
-            <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
+            {isSubmitting ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.googleButtonText}>Memproses...</Text>
+              </View>
+            ) : (
+              <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
+            )}
           </Pressable>
 
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Informasi Pengembangan</Text>
+            <Text style={styles.infoTitle}>Privasi Penyimpanan</Text>
             <Text style={styles.infoDescription}>
-              Fondasi client API dan manajemen token SecureStore telah siap. Tombol autentikasi Google native akan diaktifkan pada Milestone M8-2.
+              DayDone hanya meminta izin untuk membuat dan mengelola foto dokumentasi di folder DayDone pada Google Drive pribadimu.
             </Text>
           </View>
         </View>
@@ -93,6 +132,19 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
   },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  errorText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    lineHeight: 18,
+  },
   googleButton: {
     backgroundColor: '#0284C7',
     paddingVertical: 14,
@@ -108,6 +160,14 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.99 }],
+  },
+  buttonDisabled: {
+    opacity: 0.65,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   googleButtonText: {
     color: '#FFFFFF',
