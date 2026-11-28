@@ -46,3 +46,25 @@ export function formatShortDateIndonesian(dateStr: string): string {
     year: 'numeric',
   });
 }
+
+/**
+ * Mengembalikan string bulan berjalan lokal dalam format YYYY-MM (misal "2026-11")
+ * untuk parameter query GET /logs/stats?month=YYYY-MM.
+ */
+export function getCurrentLocalMonthString(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Memformat string YYYY-MM menjadi nama bulan dan tahun bahasa Indonesia.
+ * Contoh: "2026-11" -> "November 2026"
+ */
+export function formatMonthYearIndonesian(monthStr: string): string {
+  const date = parseLocalDate(`${monthStr}-01`);
+  return new Intl.DateTimeFormat('id-ID', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}

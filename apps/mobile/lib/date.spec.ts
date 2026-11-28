@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatDateIndonesian,
+  formatMonthYearIndonesian,
   formatShortDateIndonesian,
+  getCurrentLocalMonthString,
   getTodayLocalDateString,
   parseLocalDate,
 } from './date';
@@ -39,5 +41,15 @@ describe('mobile date helpers', () => {
 
   it('formatShortDateIndonesian menampilkan format ringkas bahasa Indonesia', () => {
     expect(formatShortDateIndonesian('2026-11-26')).toBe('26 Nov 2026');
+  });
+
+  it('getCurrentLocalMonthString mengembalikan YYYY-MM lokal dengan zero-padding', () => {
+    expect(getCurrentLocalMonthString(new Date(2026, 0, 15))).toBe('2026-01');
+    expect(getCurrentLocalMonthString(new Date(2026, 10, 28))).toBe('2026-11');
+  });
+
+  it('formatMonthYearIndonesian memformat YYYY-MM menjadi nama bulan dan tahun Indonesia', () => {
+    expect(formatMonthYearIndonesian('2026-11')).toBe('November 2026');
+    expect(formatMonthYearIndonesian('2026-01')).toBe('Januari 2026');
   });
 });
