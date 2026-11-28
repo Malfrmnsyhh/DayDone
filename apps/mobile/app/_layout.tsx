@@ -54,15 +54,31 @@ function RootLayoutNavigation() {
     );
   }
 
-    return (
+  return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
-        name="logs/[id]"
+        name="logs/new"
+        options={{
+          headerShown: true,
+          title: 'Tulis Logbook',
+          headerBackTitle: 'Kembali',
+        }}
+      />
+      <Stack.Screen
+        name="logs/[id]/index"
         options={{
           headerShown: true,
           title: 'Detail Logbook',
+          headerBackTitle: 'Kembali',
+        }}
+      />
+      <Stack.Screen
+        name="logs/[id]/edit"
+        options={{
+          headerShown: true,
+          title: 'Ubah Logbook',
           headerBackTitle: 'Kembali',
         }}
       />

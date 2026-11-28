@@ -65,10 +65,11 @@ export default function LogDetailScreen() {
   };
 
   const handleEditPress = () => {
-    Alert.alert(
-      'Segera Hadir (M8-5)',
-      'Form ubah logbook dan unggah foto akan dibangun di tahap M8-5.',
-    );
+    if (!log) return;
+    router.push({
+      pathname: '/logs/[id]/edit',
+      params: { id: log.id },
+    });
   };
 
   const handleDeletePress = () => {
