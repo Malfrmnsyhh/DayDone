@@ -54,11 +54,19 @@ function RootLayoutNavigation() {
     );
   }
 
-  return (
+    return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+      <Stack.Screen
+        name="logs/[id]"
+        options={{
+          headerShown: true,
+          title: 'Detail Logbook',
+          headerBackTitle: 'Kembali',
+        }}
+      />
+      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
