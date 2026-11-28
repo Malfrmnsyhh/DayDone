@@ -145,10 +145,15 @@ export default function HomeScreen() {
                   pressed && styles.buttonPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Lihat riwayat logbook"
-                onPress={() => router.push('/(tabs)/logs')}>
+                accessibilityLabel="Lihat detail logbook hari ini"
+                onPress={() =>
+                  router.push({
+                    pathname: '/logs/[id]',
+                    params: { id: todayLog.id },
+                  })
+                }>
                 <Text style={styles.secondaryButtonText}>
-                  Lihat di Riwayat Logbook
+                  Lihat Detail Hari Ini
                 </Text>
               </Pressable>
             </View>
