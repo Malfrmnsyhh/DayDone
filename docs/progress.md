@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 27 November 2026 (perbaikan tampilan 3 status Google Drive termasuk `NEEDS_RECONNECT` di beranda mobile + unit test `lib/drive-status.ts`)
+**Terakhir diperbarui:** 28 November 2026 (M8-2 Login Google native & M8-3 Beranda mobile aktif terverifikasi langsung di perangkat Android fisik)
 
 ## Status per milestone
 
@@ -16,7 +16,7 @@
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
 | M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
-| M8 Aplikasi mobile | Berjalan — M8-1 selesai (terverifikasi di Android); M8-2 menunggu kredensial Android OAuth |
+| M8 Aplikasi mobile | Berjalan — M8-1, M8-2, dan M8-3 selesai (terverifikasi di Android); lanjut ke M8-4 |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
@@ -215,7 +215,8 @@
 - [x] Web: kartu "Ringkasan <bulan>" di dashboard — logbook bulan ini, total logbook, dan hari kerja (Sen–Jum) tanpa logbook sampai hari ini (dihitung di client dengan tanggal lokal). Setiap hari kosong adalah tautan ke `/logs/new?date=YYYY-MM-DD`; form buat logbook membaca `?date=`. Stats ikut ter-invalidasi karena query key berada di bawah prefix `['logs']`.
 - [x] M8-1: `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal & prasyarat Windows Android.
 - [x] M8-1 AC "development build jalan di Android" terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G (`SM_A336E`) via USB (`adb reverse` port 3000 & 8081), APK terpasang, Metro mengirim 1.432 modul tanpa error, dan layar login DayDone tampil normal.
-- [ ] M8-2 menunggu: Android OAuth client ID (package `app.daydone.mobile` + SHA-1 debug & EAS), akun Expo.
+- [x] M8-2: Login Google native (`@react-native-google-signin/google-signin`) dengan `serverAuthCode` (`offlineAccess: true`, `forceCodeForRefreshToken: true`, scope `drive.file`), `lib/google-signin.ts`, sinkronisasi `signOutGoogle()` di `auth-store.ts`, serta state loading & alert error di `app/(auth)/login.tsx`. Terverifikasi login & masuk ke Beranda di perangkat Android fisik via USB.
+- [x] M8-3: Beranda mobile aktif — `QueryClientProvider` di `app/_layout.tsx`, `lib/logs-api.ts` (`useLogByDate` dengan pemetaan 404 → `null` & `useLogStats`), helper bulan lokal di `lib/date.ts` + unit test, kartu status logbook hari ini nyata, ringkasan bulanan, serta *pull-to-refresh* (`RefreshControl`) di `app/(tabs)/index.tsx`. Terverifikasi di perangkat Android fisik.
 - [x] Audit aksesibilitas login page & Google button (NFR-08): atribut `role="alert"`, `aria-hidden="true"`, dan `focusable="false"`.
 - [x] Unit test komprehensif `LoginPage` & `GoogleLoginButton` (`apps/web/src/pages/login-page.spec.tsx` — 7 tests lolos 100%).
 - [x] Eliminasi seluruh peringatan `act(...)` pada `auth-context.spec.tsx` (wrapping `clearSession` dalam `act` di `afterEach`).
@@ -238,7 +239,7 @@
 | Akun Render | M6 | Ditunda ke M9 |
 | Akun Vercel | M7 | Ada (terlihat di bookmark) |
 | Akun Expo | M8 | Belum dipastikan |
-| Android OAuth client ID + SHA-1 (debug & EAS) | M8-2 | Belum ada |
+| Android OAuth client ID + SHA-1 (debug & EAS) | M8-2 / M8-7 | Debug SHA-1 & Android OAuth aktif; SHA-1 EAS nanti di M8-7 |
 
 ## Keputusan kecil selama pengembangan
 
