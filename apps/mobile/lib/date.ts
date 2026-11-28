@@ -68,3 +68,67 @@ export function formatMonthYearIndonesian(monthStr: string): string {
     year: 'numeric',
   }).format(date);
 }
+
+/**
+ * Memvalidasi apakah string adalah format YYYY-MM-DD dan merupakan tanggal kalender nyata
+ * (menolak tanggal tidak valid seperti "2026-02-30" atau "2026-13-01").
+ */
+export function isValidDateString(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return false;
+  }
+
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  return (
+    parsed.getFullYear() === year &&
+    parsed.getMonth() === month - 1 &&
+    parsed.getDate() === day
+  );
+}
+
+/**
+ * Menggeser tanggal YYYY-MM-DD sebanyak `deltaDays` hari pada kalender lokal
+ * tanpa risiko pergeseran zona waktu UTC.
+ */
+export function shiftLocalDateString(
+  dateStr: string,
+  deltaDays: number,
+): string {
+  const base = parseLocalDate(dateStr);
+  const shifted = new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    base.getDate() + deltaDays,
+  );
+  return getTodayLocalDateString(shifted);
+}
+
+/**
+ * Menghitung hari kerja (Senin–Jumat) dalam `month` (YYYY-MM) yang belum memiliki logbook
+ * mulai tanggal 1 sampai `today` (inklusif) menurut kalender lokal.
+ */
+export function getMissingWeekdays(
+  month: string,
+  loggedDates: readonly string[],
+  today: string = getTodayLocalDateString(),
+): string[] {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const logged = new Set(loggedDates);
+  const missing: string[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${month}-${String(day).padStart(2, '0')}`;
+    if (dateStr > today) break;
+
+    const weekday = parseLocalDate(dateStr).getDay(); // 0 = Minggu, 6 = Sabtu
+    const isWeekday = weekday >= 1 && weekday <= 5;
+    if (isWeekday && !logged.has(dateStr)) {
+      missing.push(dateStr);
+    }
+  }
+
+  return missing;
+}

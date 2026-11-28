@@ -4,8 +4,11 @@ import {
   formatMonthYearIndonesian,
   formatShortDateIndonesian,
   getCurrentLocalMonthString,
+  getMissingWeekdays,
   getTodayLocalDateString,
+  isValidDateString,
   parseLocalDate,
+  shiftLocalDateString,
 } from './date';
 
 describe('mobile date helpers', () => {
@@ -51,5 +54,31 @@ describe('mobile date helpers', () => {
   it('formatMonthYearIndonesian memformat YYYY-MM menjadi nama bulan dan tahun Indonesia', () => {
     expect(formatMonthYearIndonesian('2026-11')).toBe('November 2026');
     expect(formatMonthYearIndonesian('2026-01')).toBe('Januari 2026');
+  });
+
+  it('isValidDateString menerima tanggal kalender valid dan menolak tanggal mustahil', () => {
+    expect(isValidDateString('2026-11-28')).toBe(true);
+    expect(isValidDateString('2024-02-29')).toBe(true); // tahun kabisat
+    expect(isValidDateString('2026-02-29')).toBe(false); // bukan kabisat
+    expect(isValidDateString('2026-02-30')).toBe(false);
+    expect(isValidDateString('2026-13-01')).toBe(false);
+    expect(isValidDateString('28-11-2026')).toBe(false);
+  });
+
+  it('shiftLocalDateString menggeser hari lintas batas bulan dan tahun dengan akurat', () => {
+    expect(shiftLocalDateString('2026-11-28', -1)).toBe('2026-11-27');
+    expect(shiftLocalDateString('2026-01-01', -1)).toBe('2025-12-31');
+    expect(shiftLocalDateString('2024-02-28', 1)).toBe('2024-02-29');
+    expect(shiftLocalDateString('2026-02-28', 1)).toBe('2026-03-01');
+  });
+
+  it('getMissingWeekdays hanya menghitung hari Senin-Jumat yang belum terisi sampai today', () => {
+    // Nov 2026: 1=Min, 2=Sen, 3=Sel, 4=Rab, 5=Kam, 6=Jum, 7=Sab
+    const missing = getMissingWeekdays(
+      '2026-11',
+      ['2026-11-02', '2026-11-04'],
+      '2026-11-06',
+    );
+    expect(missing).toEqual(['2026-11-03', '2026-11-05', '2026-11-06']);
   });
 });
