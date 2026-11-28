@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 28 November 2026 (M8-6 Foto Dokumentasi mobile — kamera, galeri multi-select, unggah multipart XHR sequential + hapus foto selesai & lolos build/lint/test; butuh rebuild APK Android sebelum uji HP fisik & M8-7)
+**Terakhir diperbarui:** 28 November 2026 (M8-7 Banner Google Drive & Rekoneksi OAuth, Layar Pengaturan Akun, serta Danger Zone Hapus Akun selesai — seluruh fase Logic-First Mobile MVP tuntas menunggu uji HP fisik sebelum fase integrasi Design System FigCraft)
 
 ## Status per milestone
 
@@ -16,23 +16,26 @@
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
 | M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
-| M8 Aplikasi mobile | Berjalan — M8-1 s.d. M8-6 selesai (M8-5 terverifikasi di HP; M8-6 butuh rebuild APK Android lalu uji HP sebelum M8-7) |
+| M8 Aplikasi mobile | Logic-First MVP selesai (M8-1 s.d. M8-7 selesai; M8-6 terverifikasi di HP, M8-7 menunggu uji HP fisik; EAS Build & integrasi desain FigCraft menyusul) |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
 
 ### M0
+
 - [x] M0-1 Monorepo pnpm (`pnpm-workspace.yaml`, `apps/`, `packages/`, `.gitignore`)
 - [x] M0-2 NestJS di `apps/api` (ESM + Vitest, terlihat dari `vitest.config.ts`)
-- [x] M0-3 Prefix `api/v1` + CORS — *terverifikasi di `main.ts`*
-- [x] M0-4 `GET /api/v1/health` — *diimplementasikan via `HealthModule`*
+- [x] M0-3 Prefix `api/v1` + CORS — _terverifikasi di `main.ts`_
+- [x] M0-4 `GET /api/v1/health` — _diimplementasikan via `HealthModule`_
 - [x] M0-5 Script root: `dev`, `build`, `lint`, `test`, `format` meneruskan ke paket (`pnpm -r`)
 
 ### M1
-- [x] M1-1 `LogsModule` in-memory dengan Zod — *CRUD lengkap, deskripsi 1–5000 karakter, 409 tanggal duplikat, 404, DELETE 204, ParseUUIDPipe pada `:id`, StandardSchemaValidationPipe global*
+
+- [x] M1-1 `LogsModule` in-memory dengan Zod — _CRUD lengkap, deskripsi 1–5000 karakter, 409 tanggal duplikat, 404, DELETE 204, ParseUUIDPipe pada `:id`, StandardSchemaValidationPipe global_
 - [x] M1-2 Filter `search` (case-insensitive pada deskripsi) dan endpoint `GET /logs/by-date/:date`
 
 ### M2
+
 - [x] M2-1 `@nestjs/config` global + validasi env dengan Zod di `src/config/env.schema.ts`, template `apps/api/.env.example`
 - [x] M2-2 Setup Prisma 7: `prisma.config.ts`, `schema.prisma` sesuai `docs/03-data-model.md`, driver adapter `@prisma/adapter-pg`, generator ke `src/generated/prisma`. Migrasi `init` dan `enable_rls` sukses diterapkan ke Supabase.
 - [x] M2-3 `PrismaModule` (@Global) + `PrismaService` dengan PrismaPg adapter membaca `DATABASE_URL` dari `ConfigService`
@@ -42,6 +45,7 @@
 - [x] M2-7 `docker-compose.yml` di root dengan service `postgres-test` (port 5433)
 
 ### M3
+
 - [x] M3-1 `DevAuthGuard` sementara (`X-Dev-User-Email`) aktif hanya saat `DEV_AUTH_ENABLED=true` di lingkungan development & test.
 - [x] M3-2 Refaktor `LogsService` dari in-memory ke database via Prisma. Semua operasi wajib menerima `userId` dan di-scope ketat. Menggunakan `findFirst({ where: { id, userId } })`, data milik user lain dibalas `404 Not Found`.
 - [x] M3-3 Paginasi `page` (default 1) dan `limit` (1–100, default 20) dengan penghitungan `totalPages` di database via `$transaction([count, findMany])`. Filter `from`, `to` (validasi `from <= to`), dan `search` deskripsi case-insensitive. Validasi tanggal tolak lebih dari 1 hari di masa depan (+1 hari UTC server).
@@ -51,6 +55,7 @@
 - [x] M3-7 Unit test lengkap (52 tests) dan E2E test (19 tests) dengan isolasi database lokal Docker (`localhost:5433`) yang diverifikasi oleh `db-safety-guard.ts`.
 
 ### M4
+
 - [x] M4-1 `EncryptionService` AES-256-GCM di `src/common/crypto/` dengan format tersimpan `v1.<iv>.<tag>.<ciphertext>` base64url dan IV 12-byte acak tiap enkripsi.
 - [x] M4-2 `GoogleOAuthService` di balik token injeksi `GOOGLE_OAUTH_SERVICE` dan `FakeGoogleOAuthService` untuk pengujian deterministik.
 - [x] M4-3 `SessionsService` dengan token acak 32-byte (hash SHA-256 tersimpan di DB), rotasi atomik di dalam `$transaction`, dan deteksi pemakaian ulang (reuse detection) yang mencabut seluruh sesi aktif user.
@@ -62,13 +67,14 @@
 - [x] M4-5 `JwtAuthGuard` global (`APP_GUARD`) dengan algoritma `HS256` eksplisit dan verifikasi sesi aktif di database. Decorator `@CurrentUser()` mengembalikan `{ userId, sessionId }`. `DevAuthGuard` dihapus total.
 - [x] M4-6 Halaman uji interaktif di `apps/api/tools/google-login-test/index.html` menggunakan Google Identity Services (GIS popup) diverifikasi langsung oleh pemilik menggunakan akun Google sungguhan (login Google popup, inspeksi profil `/auth/me`, rotasi token cookie `/auth/refresh`, pencabutan seluruh sesi pada deteksi reuse, dan logout membersihkan cookie terkonfirmasi sukses).
 - [x] M4-7 Rate limiting `@nestjs/throttler` (global 100/menit, `/auth/*` 10/menit) dengan `AppThrottlerGuard` yang fleksibel untuk pengujian. Unit test (91 tests) dan E2E test (33 tests) lolos 100%.
-- [x] M4-Refinements (Penyelarasan Kontrak & Uji Manual):   
+- [x] M4-Refinements (Penyelarasan Kontrak & Uji Manual):
   - Penyelarasan status HTTP `POST /auth/google` dan `POST /auth/refresh` ke `200 OK` (`@HttpCode(HttpStatus.OK)`) sesuai `docs/04-api-spec.md`.
   - Penambahan field standar `error` (e.g. `"Conflict"`, `"Unauthorized"`) pada `DomainException` sesuai format error `docs/04-api-spec.md` + unit test.
   - Sentralisasi opsi Set-Cookie `daydone_rt` (`path: '/api/v1/auth'`, `httpOnly`, `sameSite`, `secure`, `maxAge`) via helper `getCookieOptions()` untuk memastikan pergantian cookie konsisten di browser tanpa duplikasi.
   - Pengujian E2E refresh berturut-turut pada web (`login -> refresh -> refresh lagi dengan cookie yang baru dirotasi -> keduanya 200`).
 
 ### M5
+
 - [x] M5-1 Interface `StorageProvider` (`src/storage/storage.interface.ts`) + `InMemoryStorageProvider` untuk pengujian unit & E2E tanpa ketergantungan Google API.
 - [x] M5-2 `GoogleDriveStorage` (`src/storage/google-drive.storage.ts`): autentikasi per user menggunakan refresh token yang didekripsi AES-256-GCM, retry backoff eksponensial (429/5xx), dan pemetaan error aman (`invalid_grant` -> 409 `DRIVE_RECONNECT_REQUIRED`, kuota penuh -> 507 `DRIVE_STORAGE_FULL`, fallback -> 502 `DRIVE_UNAVAILABLE`).
 - [x] M5-3 `ensureAppFolder`: pembuatan folder aplikasi "DayDone" otomatis saat login pertama dan sebelum unggah. Aman terhadap race condition paralel via update kondisional (`updateMany({ where: { id, driveFolderId } })`). Jika folder di Drive dipindah ke Trash (`files.get` trashed: true) atau 404, sistem otomatis membuat folder baru.
@@ -94,9 +100,10 @@
 - [x] M6-3 Structured Logging: terpasang `nestjs-pino`, `pino-http`, dan `pino-pretty` (dev). Request ID tracing (`X-Request-Id` otomatis dibuatkan UUID bila tidak ada dan dikembalikan di header response). Redaksi data sensitif otomatis untuk header (`authorization`, `cookie`, `set-cookie`), body request (`code`, `refreshToken`, `confirm`), dan custom URL serializer untuk query parameter `token` pada URL streaming lampiran (`token=[REDACTED]`).
 - [x] M6-4 CI GitHub Actions (`.github/workflows/ci.yml`): otomatis terpicu pada push/PR ke `main`, menggunakan Node.js 24, pnpm 12.16.1, caching store, service container Postgres 17, `pnpm install --frozen-lockfile`, `prisma migrate deploy`, lint, build, unit test, e2e test, dan `pnpm audit --audit-level high`. Kerentanan transitif pada `undici` dan `tmp` diatasi dengan override root.
 - [x] M6-5 Multi-stage Dockerfile: berbasis `node:24-slim`, 4-stage (`base`, `builder`, `deployer`, `runner`), menggunakan corepack pnpm, isolasi dependensi via `pnpm deploy --prod`, container berjalan sebagai user non-root `node`, script `start:prod` (`prisma migrate deploy && node dist/main.js`), dan `.dockerignore` ketat tanpa kebocoran secret atau artifact lokal.
-- [ ] M6-6 Deploy API staging (Render / Railway) — *ditunda ke M9 sebagai M9-0*.
+- [ ] M6-6 Deploy API staging (Render / Railway) — _ditunda ke M9 sebagai M9-0_.
 
 ### M7 (Fase A — Fondasi Shared & Web)
+
 - [x] M7-1 Inisialisasi `packages/shared` (`@daydone/shared`):
   - Skema Zod request dipindahkan dari `apps/api` (`log`, `auth`, `delete-user`).
   - Tipe domain dan response (`User`, `UserProfileResponse`, `DriveStatus`, `Log`, `LogListItem`, `Attachment`, `Paginated<T>`, `ApiError`).
@@ -126,6 +133,7 @@
   - `pnpm build`, `pnpm lint`, dan `pnpm test` lolos 100% di seluruh paket monorepo.
 
 ### M7 (Fase B — Fitur Logbook Web Dashboard)
+
 - [x] M7-6 Helper Tanggal Lokal & Format Indonesia (`apps/web/src/lib/date.ts`):
   - `getTodayLocalDateString()` menghitung tanggal lokal `YYYY-MM-DD` perangkat tanpa offset UTC.
   - `parseLocalDate()` mencegah pergeseran zona waktu saat parsing `YYYY-MM-DD`.
@@ -160,6 +168,7 @@
   - Penyelarasan kontrak response logbook tunggal (objek `Log` langsung tanpa wrapper `data`): OK
 
 ### M7 (Fase C — Foto Dokumentasi, Google Drive & Pengaturan Akun)
+
 - [x] M7-13 Penguatan Concurrency Backend API (`apps/api/src/attachments/attachments.service.ts`):
   - Pessimistic row locking PostgreSQL: `SELECT id FROM "log_entries" WHERE id = $1::uuid AND "userId" = $2::uuid FOR UPDATE` di dalam `prisma.$transaction`.
   - Pengecekan ulang jumlah lampiran di bawah kunci transaksi; bila paralel upload melebihi batas 5, request kalah balapan deterministik ditolak dengan `409 ATTACHMENT_LIMIT_REACHED` dan file di Drive di-trash secara otomatis.
@@ -191,6 +200,7 @@
   - Banner peringatan status Google Drive & Halaman Pengaturan (`/settings`) dengan dialog konfirmasi ketik "HAPUS": OK
 
 ### Persiapan Rilis M9 (Produksi)
+
 - [x] Konfigurasi SPA fallback rewrite di [apps/web/vercel.json](file:///D:/website/DayDone/apps/web/vercel.json) (`/(.*)` -> `/index.html`) untuk hosting Vercel.
 - [x] Pembaruan `.dockerignore` untuk mengecualikan direktori web, mobile, dokumen, dan artefak saat build kontainer API.
 - [x] Optimasi bundle chunking Rollup di Vite (`manualChunks`) memisahkan `react-vendor` dan `query-vendor` (menghilangkan warning >500 kB).
@@ -198,6 +208,7 @@
 - [x] Penambahan panduan konfigurasi environment produksi di `apps/api/.env.example`.
 
 ### Perbaikan hasil audit (14 November 2026, pengembangan lokal)
+
 - [x] Pembersihan tabel `sessions`: sesi kedaluwarsa atau dicabut > 7 hari dihapus best-effort saat login dan setelah rotasi refresh (sesi yang baru dicabut tetap disimpan untuk deteksi reuse).
 - [x] `JwtAuthGuard` mengembalikan 401 dengan `code: "SESSION_EXPIRED"` (sebelumnya tanpa `code`); `docs/04-api-spec.md` diperbarui.
 - [x] Revoke token Google dipindah dari `UsersService` ke `GoogleOAuthService.revokeToken` (fake ikut diperbarui).
@@ -211,15 +222,17 @@
 - [ ] Masih ditunda ke M9: `COOKIE_SAMESITE` lintas situs, Swagger di `render.yaml`, perbaikan `CMD` Dockerfile.
 
 ### FR-13 Statistik bulanan & M8-1 Scaffold Mobile (14 November 2026)
+
 - [x] `GET /api/v1/logs/stats?month=YYYY-MM` → `{ month, totalThisMonth, totalAllTime, loggedDates }`, di-scope `userId`, schema `logStatsQuerySchema` di `@daydone/shared`, spec diperbarui. Unit + e2e (lintas user, 400, 401) lolos; branch coverage `logs.service.ts` 97,9%.
 - [x] Web: kartu "Ringkasan <bulan>" di dashboard — logbook bulan ini, total logbook, dan hari kerja (Sen–Jum) tanpa logbook sampai hari ini (dihitung di client dengan tanggal lokal). Setiap hari kosong adalah tautan ke `/logs/new?date=YYYY-MM-DD`; form buat logbook membaca `?date=`. Stats ikut ter-invalidasi karena query key berada di bawah prefix `['logs']`.
 - [x] M8-1: `apps/mobile` Expo SDK 58 + expo-router + TS; Metro dikonfigurasi untuk monorepo pnpm; `lib/api-client.ts` (access token di memori, refresh token di SecureStore, refresh single-flight lewat body) + 9 unit test; `lib/auth-store.ts`; README cara menjalankan dengan API lokal & prasyarat Windows Android.
 - [x] M8-1 AC "development build jalan di Android" terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G (`SM_A336E`) via USB (`adb reverse` port 3000 & 8081), APK terpasang, Metro mengirim 1.432 modul tanpa error, dan layar login DayDone tampil normal.
 - [x] M8-2: Login Google native (`@react-native-google-signin/google-signin`) dengan `serverAuthCode` (`offlineAccess: true`, `forceCodeForRefreshToken: true`, scope `drive.file`), `lib/google-signin.ts`, sinkronisasi `signOutGoogle()` di `auth-store.ts`, serta state loading & alert error di `app/(auth)/login.tsx`. Terverifikasi login & masuk ke Beranda di perangkat Android fisik via USB.
-- [x] M8-3: Beranda mobile aktif — `QueryClientProvider` di `app/_layout.tsx`, `lib/logs-api.ts` (`useLogByDate` dengan pemetaan 404 → `null` & `useLogStats`), helper bulan lokal di `lib/date.ts` + unit test, kartu status logbook hari ini nyata, ringkasan bulanan, serta *pull-to-refresh* (`RefreshControl`) di `app/(tabs)/index.tsx`. Terverifikasi di perangkat Android fisik.
-- [x] M8-4: Daftar & Detail Logbook mobile — perluasan `lib/logs-api.ts` (`useLogsList` infinite query, `useLogDetail` dengan `staleTime` 4 menit, `useDeleteLog` invalidasi `['logs']`, + 4 unit test di `lib/logs-api.spec.ts`), layar daftar `app/(tabs)/logs.tsx` (pencarian debounce 300ms, `FlatList`, *pull-to-refresh*, *infinite scroll*, 4 state), serta layar detail `app/logs/[id]/index.tsx` (galeri foto + fail-safe refetch `onError` signed URL, lightbox `Modal` layar penuh, tombol Hapus dengan konfirmasi `Alert`, dan penanganan 404). Terverifikasi di perangkat Android fisik.
+- [x] M8-3: Beranda mobile aktif — `QueryClientProvider` di `app/_layout.tsx`, `lib/logs-api.ts` (`useLogByDate` dengan pemetaan 404 → `null` & `useLogStats`), helper bulan lokal di `lib/date.ts` + unit test, kartu status logbook hari ini nyata, ringkasan bulanan, serta _pull-to-refresh_ (`RefreshControl`) di `app/(tabs)/index.tsx`. Terverifikasi di perangkat Android fisik.
+- [x] M8-4: Daftar & Detail Logbook mobile — perluasan `lib/logs-api.ts` (`useLogsList` infinite query, `useLogDetail` dengan `staleTime` 4 menit, `useDeleteLog` invalidasi `['logs']`, + 4 unit test di `lib/logs-api.spec.ts`), layar daftar `app/(tabs)/logs.tsx` (pencarian debounce 300ms, `FlatList`, _pull-to-refresh_, _infinite scroll_, 4 state), serta layar detail `app/logs/[id]/index.tsx` (galeri foto + fail-safe refetch `onError` signed URL, lightbox `Modal` layar penuh, tombol Hapus dengan konfirmasi `Alert`, dan penanganan 404). Terverifikasi di perangkat Android fisik.
 - [x] M8-5: Form Buat & Ubah Logbook mobile (Pure-JS Logic-First, tanpa rebuild native) — `useCreateLog` & `useUpdateLog` invalidasi `['logs']`, helper validasi Zod `@daydone/shared` + ekstraksi `409 LOG_DATE_CONFLICT` (`getLogDateConflict`, `validateLogFormInput`, `resolveInitialFormDate`), helper tanggal lokal `isValidDateString`, `shiftLocalDateString`, & `getMissingWeekdays` + unit test (28 tests di `apps/mobile`), komponen bersama `components/log-form.tsx` (kontrol tanggal pintasan Hari Ini/Kemarin + stepper `←`/`→` + input `YYYY-MM-DD`, tanggal tetap bisa diubah di mode edit, counter karakter `X / 5000`, callout 409 + tombol "Buka logbook tanggal itu", proteksi double-submit & `usePreventRemove` unsaved changes), rute `app/logs/new.tsx` & `app/logs/[id]/edit.tsx`, serta koneksi navigasi dari Beranda (termasuk chip hari kerja kosong), Daftar (`+ Buat`), dan Detail (`Ubah Logbook`). Terverifikasi di perangkat Android fisik.
-- [x] M8-6: Foto Dokumentasi mobile (Kamera, Galeri, Unggah Multipart XHR & Hapus Foto) — instalasi `expo-image-picker@~58.0.10` + konfigurasi izin Android (`CAMERA`, `READ_MEDIA_IMAGES`) & plugin di `app.json` (tetap mempertahankan `./plugins/with-android-cmake` & pengecualian `react-native.config.js`), helper izin kamera/galeri `lib/image-picker.ts`, data layer `lib/attachments-api.ts` (validasi MIME/ekstensi Android/ukuran 10 MB/kuota 5 foto, `uploadAttachmentXHR` dengan progress 0–100% + auto-refresh 401 1x, antrean sequential `runSequentialUploadQueue`, `useDeleteAttachment` invalidasi `['logs']`) + 10 unit test di `lib/attachments-api.spec.ts`, serta integrasi penuh di `app/logs/[id]/index.tsx` (indikator kuota dinamis, tombol Kamera/Galeri, progress bar per file, hapus foto per thumbnail & di Lightbox). **Catatan:** membutuhkan rebuild APK Android (`expo prebuild` + `pnpm --filter mobile android`) karena penambahan modul native `expo-image-picker`.
+- [x] M8-6: Foto Dokumentasi mobile (Kamera, Galeri, Unggah Multipart XHR & Hapus Foto) — instalasi `expo-image-picker@~58.0.10` + konfigurasi izin Android (`CAMERA`, `READ_MEDIA_IMAGES`) & plugin di `app.json` (tetap mempertahankan `./plugins/with-android-cmake` & pengecualian `react-native.config.js`), helper izin kamera/galeri `lib/image-picker.ts`, data layer `lib/attachments-api.ts` (validasi MIME/ekstensi Android/ukuran 10 MB/kuota 5 foto, `uploadAttachmentXHR` dengan progress 0–100% + auto-refresh 401 1x, antrean sequential `runSequentialUploadQueue`, `useDeleteAttachment` invalidasi `['logs']`) + 10 unit test di `lib/attachments-api.spec.ts`, serta integrasi penuh di `app/logs/[id]/index.tsx` (indikator kuota dinamis, tombol Kamera/Galeri, progress bar per file, hapus foto per thumbnail & di Lightbox). Terverifikasi di perangkat Android fisik.
+- [x] M8-7: Banner Google Drive & Rekoneksi OAuth, Layar Pengaturan Akun & Danger Zone Hapus Akun (Pure-JS, penutup Logic-First Mobile MVP) — penambahan `preserveSessionOn401` di `lib/api-client.ts` & `forcePrompt` di `lib/google-signin.ts` agar batal/error rekoneksi Drive tidak pernah memutus sesi aktif; `runDriveReconnectFlow` & `shouldShowDriveBanner` di `lib/drive-status.ts`; `reconnectGoogleDrive` + `queryClient.clear()` saat logout/auth-failure di `lib/auth-store.ts`; `useDeleteAccount` & validasi `deleteUserSchema` (`"HAPUS"`) di `lib/users-api.ts`; unit test tambahan di `drive-status.spec.ts`, `api-client.spec.ts`, dan `users-api.spec.ts`; komponen `components/drive-banner.tsx` terpasang di Beranda dan Detail Logbook; serta tab baru **Akun** (`app/(tabs)/settings.tsx`) berisi profil + fallback inisial, status & rekoneksi Drive, konfirmasi Logout, dan Modal Danger Zone ketik `"HAPUS"` persis. Menunggu uji HP fisik sebelum fase integrasi Design System FigCraft (`uiux/`).
 - [x] Audit aksesibilitas login page & Google button (NFR-08): atribut `role="alert"`, `aria-hidden="true"`, dan `focusable="false"`.
 - [x] Unit test komprehensif `LoginPage` & `GoogleLoginButton` (`apps/web/src/pages/login-page.spec.tsx` — 7 tests lolos 100%).
 - [x] Eliminasi seluruh peringatan `act(...)` pada `auth-context.spec.tsx` (wrapping `clearSession` dalam `act` di `afterEach`).
@@ -233,16 +246,16 @@
 
 ## Kredensial dan akses yang dibutuhkan dari pemilik
 
-| Kebutuhan | Untuk | Status |
-|---|---|---|
-| Connection string Supabase | M2 | Sudah diberikan (aktif & terverifikasi) |
-| OAuth client Web (ID + secret) dari Google Cloud | M4 | Sudah diisi pemilik di `.env` lokal |
-| Kunci rahasia JWT & Enkripsi token | M4 | Sudah diisi pemilik di `.env` lokal |
-| Akun Google penguji terdaftar sebagai test user | M4–M5 | Tersedia di Google Cloud Console |
-| Akun Render | M6 | Ditunda ke M9 |
-| Akun Vercel | M7 | Ada (terlihat di bookmark) |
-| Akun Expo | M8 | Belum dipastikan |
-| Android OAuth client ID + SHA-1 (debug & EAS) | M8-2 / M8-7 | Debug SHA-1 & Android OAuth aktif; SHA-1 EAS nanti di M8-7 |
+| Kebutuhan                                        | Untuk       | Status                                                     |
+| ------------------------------------------------ | ----------- | ---------------------------------------------------------- |
+| Connection string Supabase                       | M2          | Sudah diberikan (aktif & terverifikasi)                    |
+| OAuth client Web (ID + secret) dari Google Cloud | M4          | Sudah diisi pemilik di `.env` lokal                        |
+| Kunci rahasia JWT & Enkripsi token               | M4          | Sudah diisi pemilik di `.env` lokal                        |
+| Akun Google penguji terdaftar sebagai test user  | M4–M5       | Tersedia di Google Cloud Console                           |
+| Akun Render                                      | M6          | Ditunda ke M9                                              |
+| Akun Vercel                                      | M7          | Ada (terlihat di bookmark)                                 |
+| Akun Expo                                        | M8          | Belum dipastikan                                           |
+| Android OAuth client ID + SHA-1 (debug & EAS)    | M8-2 / M8-7 | Debug SHA-1 & Android OAuth aktif; SHA-1 EAS nanti di M8-7 |
 
 ## Keputusan kecil selama pengembangan
 
@@ -271,7 +284,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 - 2026-11-04 — Redaksi otomatis token HMAC pada query URL logging: serializer Pino mendeteksi parameter `token` pada `/attachments/:id/content?token=...` dan menggantinya menjadi `[REDACTED]` agar secret HMAC tidak tersimpan di log server.
 - 2026-11-04 — Override pnpm untuk `undici` dan `tmp`: konfigurasi `overrides` di root `package.json` dan `pnpm-workspace.yaml` mengeliminasi 8 kerentanan keamanan tingkat high pada dependensi transitif `@nestjs/mau`.
 - 2026-11-05 — Deploy staging API ditunda ke M9 — kendala kartu kredit (Render) dan healthcheck gagal (Railway); pengembangan web (M7) dan mobile (M8) memakai API lokal (`http://localhost:3000`).
-- 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9. *Koreksi 14 Nov: `prisma` ternyata ada di `dependencies`; tersangka yang lebih mungkin adalah `CMD ["pnpm", ...]` yang dijalankan sebagai user `node` dan migrasi di perintah start.*
+- 2026-11-05 — Catatan dugaan penyebab gagal di Railway untuk M9 — image produksi Docker dibuat dengan `pnpm --filter api deploy --prod` sehingga binary CLI `prisma` (`devDependencies`) kemungkinan tidak disertakan ke `/prod/api`, menyebabkan `start:prod` (`prisma migrate deploy && node dist/main.js`) gagal saat kontainer runtime menyala. Hipotesis ini belum diverifikasi; cek Deploy Logs saat mencoba deployment kembali di M9. _Koreksi 14 Nov: `prisma` ternyata ada di `dependencies`; tersangka yang lebih mungkin adalah `CMD ["pnpm", ...]` yang dijalankan sebagai user `node` dan migrasi di perintah start._
 - 2026-11-05 — Akses token web hanya di memori — `localStorage` dan `sessionStorage` tidak dipakai demi memitigasi risiko pencurian token melalui celah XSS.
 - 2026-11-05 — Single-flight refresh di API client web — promise refresh bersama di tingkat modul mencegah race condition dan kegagalan rotasi refresh token akibat request paralel atau React StrictMode.
 - 2026-11-05 — Pemakaian Google Identity Services (GIS) `initCodeClient` langsung tanpa library wrapper — menghindari konflik peer-dependency React 19 dan menjaga integrasi popup tetap transparan serta konsisten dengan uji M4.
@@ -296,14 +309,14 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 ## Catatan untuk pemilik (hal yang perlu dipelajari dari task yang dikerjakan agent)
 
 1. **OAuth 2.0 Authorization Code Flow di Backend (`src/auth/google/real-google-oauth.service.ts`)**:
-   - Berbeda dari login biasa di mana frontend mengirim token mentah, DayDone menggunakan *authorization code flow*. Frontend hanya menerima kode otorisasi sementara dari popup Google, lalu backend menukarkannya langsung ke Google server-to-server. Dengan cara ini, `client_secret` tetap aman di server dan refresh token Google yang berumur panjang tidak pernah lewat di browser pengguna.
+   - Berbeda dari login biasa di mana frontend mengirim token mentah, DayDone menggunakan _authorization code flow_. Frontend hanya menerima kode otorisasi sementara dari popup Google, lalu backend menukarkannya langsung ke Google server-to-server. Dengan cara ini, `client_secret` tetap aman di server dan refresh token Google yang berumur panjang tidak pernah lewat di browser pengguna.
 
 2. **Manajemen Sesi Opaque & Hash SHA-256 (`src/auth/sessions/sessions.service.ts`)**:
    - Refresh token sesi adalah string acak 32-byte (256-bit entropy). Server **tidak pernah menyimpan token asli di database**, melainkan hanya nilai hash SHA-256-nya (mirip dengan hashing password). Jika database bocor, penyerang tidak dapat menggunakan hash tersebut untuk membuat sesi baru.
-   - Rotasi token mengimplementasikan *reuse detection*: jika ada pihak yang mencoba memakai token yang sudah terotasi (`replacedById` tidak kosong), sistem langsung mencabut seluruh sesi aktif user tersebut.
+   - Rotasi token mengimplementasikan _reuse detection_: jika ada pihak yang mencoba memakai token yang sudah terotasi (`replacedById` tidak kosong), sistem langsung mencabut seluruh sesi aktif user tersebut.
 
 3. **Enkripsi Simetris AES-256-GCM (`src/common/crypto/encryption.service.ts`)**:
-   - AES-256-GCM adalah enkripsi terotentikasi (*Authenticated Encryption with Associated Data* / AEAD). Format `v1.<iv>.<tag>.<ciphertext>` menjamin bahwa data tidak hanya terenkripsi tetapi juga terlindungi dari modifikasi/tampering (jika ciphertext atau auth tag diubah 1 bit saja, proses dekripsi akan menolaknya).
+   - AES-256-GCM adalah enkripsi terotentikasi (_Authenticated Encryption with Associated Data_ / AEAD). Format `v1.<iv>.<tag>.<ciphertext>` menjamin bahwa data tidak hanya terenkripsi tetapi juga terlindungi dari modifikasi/tampering (jika ciphertext atau auth tag diubah 1 bit saja, proses dekripsi akan menolaknya).
 
 4. **Proteksi CSRF Header & Cookie HttpOnly (`src/auth/auth.controller.ts`)**:
    - Web menyimpan refresh token di cookie `daydone_rt` dengan flag `HttpOnly` (tidak bisa dibaca oleh JavaScript jahat via XSS).
@@ -318,20 +331,20 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
    - Error bawaan Multer (seperti `LIMIT_FILE_SIZE` atau `LIMIT_FILE_COUNT`) otomatis ditangkap oleh filter global `MulterExceptionFilter` dan diubah menjadi response standar DayDone (`413 FILE_TOO_LARGE` atau `409 ATTACHMENT_LIMIT_REACHED`).
 
 7. **StreamableFile & Streaming Media (`src/attachments/attachments.controller.ts`)**:
-   - Saat browser memuat gambar melalui signed URL, API tidak membaca seluruh file ke memori Node.js sebelum mengirimkannya. Sebaliknya, API menggunakan `StreamableFile(Readable)` untuk mengalirkan (*pipe*) stream biner langsung dari Google Drive ke koneksi HTTP client.
+   - Saat browser memuat gambar melalui signed URL, API tidak membaca seluruh file ke memori Node.js sebelum mengirimkannya. Sebaliknya, API menggunakan `StreamableFile(Readable)` untuk mengalirkan (_pipe_) stream biner langsung dari Google Drive ke koneksi HTTP client.
    - Header keamanan ditambahkan secara otomatis: `Cache-Control: private, max-age=300` (cache privat 5 menit) dan `X-Content-Type-Options: nosniff` (mencegah browser mengeksekusi file sebagai script).
 
 8. **Abstraksi Storage & Token Injeksi (`src/storage/storage.interface.ts`, `src/storage/storage.module.ts`)**:
-   - Menerapkan prinsip *Dependency Inversion* (SOLID). Modul bisnis (`LogsModule` & `AttachmentsModule`) tidak memanggil library `@googleapis/drive` secara langsung, melainkan bergantung pada interface `StorageProvider` melalui token injeksi `STORAGE_PROVIDER`.
+   - Menerapkan prinsip _Dependency Inversion_ (SOLID). Modul bisnis (`LogsModule` & `AttachmentsModule`) tidak memanggil library `@googleapis/drive` secara langsung, melainkan bergantung pada interface `StorageProvider` melalui token injeksi `STORAGE_PROVIDER`.
    - Hal ini memungkinkan sistem pengujian berjalan 100% deterministik dan super cepat menggunakan `InMemoryStorageProvider`, tanpa perlu koneksi internet atau akun Google Drive sungguhan.
 
 9. **Signed URL HMAC-SHA256 Berumur Pendek (`src/attachments/signed-url.service.ts`)**:
    - Tag HTML `<img>` di browser tidak dapat mengirim header kustom `Authorization: Bearer <token>`.
    - Untuk mengamankan akses file tanpa membuat file menjadi publik, server membuat URL bertanda tangan kriptografis berumur 5 menit: `token = base64url(payload) + "." + base64url(HMAC)`.
-   - Verifikasi token memvalidasi integritas HMAC menggunakan `crypto.timingSafeEqual` untuk mencegah *timing attack*, serta memastikan waktu kedaluwarsa belum lewat.
+   - Verifikasi token memvalidasi integritas HMAC menggunakan `crypto.timingSafeEqual` untuk mencegah _timing attack_, serta memastikan waktu kedaluwarsa belum lewat.
 
 10. **Pola Kompensasi (All-or-Nothing Saga) (`src/attachments/attachments.service.ts`)**:
-    - Operasi unggah melibatkan dua sistem terpisah: Google Drive dan PostgreSQL. Karena Google Drive tidak mendukung transaksi database ACID, kegagalan di tengah jalan (misal file ke-3 gagal diproses atau insert database error) ditangani dengan pola kompensasi: seluruh file yang sudah terlanjur terunggah ke Drive otomatis dipindahkan ke Trash (`storageProvider.trash()`), mencegah timbulnya file sampah yatim piatu (*orphan files*).
+    - Operasi unggah melibatkan dua sistem terpisah: Google Drive dan PostgreSQL. Karena Google Drive tidak mendukung transaksi database ACID, kegagalan di tengah jalan (misal file ke-3 gagal diproses atau insert database error) ditangani dengan pola kompensasi: seluruh file yang sudah terlanjur terunggah ke Drive otomatis dipindahkan ke Trash (`storageProvider.trash()`), mencegah timbulnya file sampah yatim piatu (_orphan files_).
 
 11. **Pembaruan Bersyarat untuk Menghindari Race Condition (`src/storage/google-drive.storage.ts`)**:
     - Saat membuat folder aplikasi pertama kali atau membuat ulang folder yang terhapus/di-trash, beberapa request paralel dapat berjalan bersamaan.
@@ -353,7 +366,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
     - Setiap baris log diberi pelacak `reqId` (menggunakan header `X-Request-Id` jika ada, atau generate UUID otomatis) dan header tersebut dikirim kembali ke client untuk memudahkan troubleshooting end-to-end.
     - Redaksi otomatis (`redact.paths` dan custom serializer) menjamin data sensitif seperti password, authorization header, token sesi cookie, payload autentikasi, serta query token URL gambar disensor menjadi `[REDACTED]`.
 
-15. **OpenAPI / Swagger Tanpa Class-Validator (`src/**/*.controller.ts`)**:
+15. **OpenAPI / Swagger Tanpa Class-Validator (`src/**/\*.controller.ts`)\*\*:
     - DayDone menggunakan Zod untuk validasi input (bukan `class-validator`).
     - Dokumentasi Swagger dibuat menggunakan decorator `@nestjs/swagger` di controller (`@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiBearerAuth`, `@ApiCookieAuth`) serta skema OpenAPI manual pada payload kompleks.
     - Ini menghasilkan dokumentasi interaktif di `/api/docs` dan spesifikasi JSON di `/api/docs-json` tanpa perlu mengubah arsitektur validasi Zod.
@@ -365,8 +378,8 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 
 17. **Single-Flight Promise untuk Token Refresh di Frontend (`apps/web/src/api/client.ts`)**:
     - Saat browser mengirim beberapa request API bersamaan dan access token telah habis, seluruh request akan menerima status `401 Unauthorized` serentak.
-    - Jika masing-masing request memanggil `/auth/refresh` sendiri-sendiri, refresh token pertama akan merotasi cookie sesi, sedangkan request kedua akan mengirim token yang baru saja hangus sehingga memicu *reuse detection* (yang mencabut seluruh sesi pengguna di server!).
-    - Pola *single-flight*: kita menyimpan variabel `refreshPromise` bersama di tingkat modul API client. Request pertama membuat promise refresh; request ke-2, ke-3, dst hanya ikut menunggu promise yang sama (`await refreshPromise`). Setelah selesai, promise di-reset ke `null` dan seluruh request diulang dengan token baru yang diperoleh.
+    - Jika masing-masing request memanggil `/auth/refresh` sendiri-sendiri, refresh token pertama akan merotasi cookie sesi, sedangkan request kedua akan mengirim token yang baru saja hangus sehingga memicu _reuse detection_ (yang mencabut seluruh sesi pengguna di server!).
+    - Pola _single-flight_: kita menyimpan variabel `refreshPromise` bersama di tingkat modul API client. Request pertama membuat promise refresh; request ke-2, ke-3, dst hanya ikut menunggu promise yang sama (`await refreshPromise`). Setelah selesai, promise di-reset ke `null` dan seluruh request diulang dengan token baru yang diperoleh.
 
 18. **Penyimpanan Token Akses di Memori vs LocalStorage (`apps/web/src/api/client.ts`)**:
     - `localStorage` dan `sessionStorage` rentan dibaca oleh script apa pun yang dieksekusi di browser (misalnya celah XSS atau library pihak ketiga yang disusupi).
@@ -391,7 +404,7 @@ Catat di sini keputusan yang tidak cukup besar untuk ADR (format: tanggal — ke
 
 23. **Mitigasi Signed URL Kedaluwarsa di SPA Frontend (`apps/web/src/components/attachments/photo-gallery.tsx`)**:
     - Signed URL gambar memiliki masa berlaku pendek (5 menit) demi keamanan. Jika tab logbook dibiarkan terbuka lebih dari 5 menit, gambar akan gagal dimuat atau pecah saat pengguna melihat galeri.
-    - Solusi dua lapis diterapkan: pertama, `staleTime: 4 * 60 * 1000` (4 menit) pada TanStack Query memastikan saat pengguna kembali ke tab, query otomatis dianggap stale dan me-refetch URL baru sebelum masa 5 menit habis. Kedua, jika URL sempat kedaluwarsa, event `onError` pada tag `<img>` bertindak sebagai jaring pengaman (*fail-safe*) yang secara otomatis memicu `queryClient.invalidateQueries` satu kali untuk mendapatkan URL segar tanpa perlu me-reload seluruh halaman.
+    - Solusi dua lapis diterapkan: pertama, `staleTime: 4 * 60 * 1000` (4 menit) pada TanStack Query memastikan saat pengguna kembali ke tab, query otomatis dianggap stale dan me-refetch URL baru sebelum masa 5 menit habis. Kedua, jika URL sempat kedaluwarsa, event `onError` pada tag `<img>` bertindak sebagai jaring pengaman (_fail-safe_) yang secara otomatis memicu `queryClient.invalidateQueries` satu kali untuk mendapatkan URL segar tanpa perlu me-reload seluruh halaman.
 
 24. **Konfigurasi SPA Routing Vercel & Cookie Lintas Domain (`SameSite=None; Secure`)**:
     - Vercel memerlukan konfigurasi rewrite `/(.*)` ke `/index.html` via `apps/web/vercel.json` agar navigasi internal SPA (seperti `/settings` atau `/logs/:id`) tidak memicu `404 Not Found` saat dibuka langsung atau di-refresh.
