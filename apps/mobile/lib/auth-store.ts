@@ -18,6 +18,8 @@ import {
   subscribeSession,
 } from './api-client';
 
+import { signOutGoogle } from './google-signin';
+
 export interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
@@ -118,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Best-effort logout
     } finally {
+      await signOutGoogle();
       await clearSession();
       setUser(null);
     }
