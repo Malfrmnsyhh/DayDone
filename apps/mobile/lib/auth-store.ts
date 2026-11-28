@@ -5,7 +5,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import type { User } from '@daydone/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import type { AuthResponse, User } from '@daydone/shared';
 import {
   apiFetch,
   clearSession,
@@ -17,20 +18,25 @@ import {
   setStoredRefreshToken,
   subscribeSession,
 } from './api-client';
-
-import { signOutGoogle } from './google-signin';
+import {
+  type DriveReconnectOutcome,
+  runDriveReconnectFlow,
+} from './drive-status';
+import { requestGoogleServerAuthCode, signOutGoogle } from './google-signin';
 
 export interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   loginWithGoogle: (serverAuthCode: string) => Promise<void>;
+  reconnectGoogleDrive: () => Promise<DriveReconnectOutcome>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(getCurrentUser());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -44,9 +50,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Tangani auth failure (refresh gagal / sesi kedaluwarsa)
   useEffect(() => {
     return onAuthFailure(() => {
+      queryClient.clear();
       setUser(null);
     });
-  }, []);
+  }, [queryClient]);
 
   // Bootstrap awal: cek apakah ada refresh token tersimpan di SecureStore
   useEffect(() => {
@@ -86,12 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginWithGoogle = useCallback(async (serverAuthCode: string) => {
-    // Alur pertukaran serverAuthCode dengan backend DayDone (fondasi M8-2)
-    const result = await apiFetch<{
-      accessToken: string;
-      refreshToken: string;
-      user: User;
-    }>('/auth/google', {
+    const result = await apiFetch<AuthResponse>('/auth/google', {
       method: 'POST',
       body: JSON.stringify({
         code: serverAuthCode,
@@ -103,9 +105,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (result.refreshToken) {
       await setStoredRefreshToken(result.refreshToken);
     }
-    setSession(result.accessToken, result.user);
-    setUser(result.user);
+    const nextUser = result.user ?? null;
+    setSession(result.accessToken, nextUser);
+    setUser(nextUser);
   }, []);
+
+  const reconnectGoogleDrive =
+    useCallback(async (): Promise<DriveReconnectOutcome> => {
+      return runDriveReconnectFlow({
+        requestAuthCode: () =>
+          requestGoogleServerAuthCode({ forcePrompt: true }),
+        exchangeCode: (serverAuthCode) =>
+          apiFetch<AuthResponse>('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({
+              code: serverAuthCode,
+              platform: 'MOBILE',
+            }),
+            skipAuth: true,
+            // Penting: bila gagal 401 saat rekoneksi, jangan memutus sesi yang sedang aktif
+            preserveSessionOn401: true,
+          }),
+        onConnected: async (result) => {
+          if (result.refreshToken) {
+            await setStoredRefreshToken(result.refreshToken);
+          }
+          const nextUser = result.user ?? getCurrentUser();
+          setSession(result.accessToken, nextUser);
+          setUser(nextUser);
+          await queryClient.invalidateQueries({ queryKey: ['logs'] });
+        },
+      });
+    }, [queryClient]);
 
   const logout = useCallback(async () => {
     try {
@@ -122,15 +153,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       await signOutGoogle();
       await clearSession();
+      queryClient.clear();
       setUser(null);
     }
-  }, []);
+  }, [queryClient]);
 
   const value: AuthContextValue = {
     user,
     isAuthenticated: !!user,
     isLoading,
     loginWithGoogle,
+    reconnectGoogleDrive,
     logout,
   };
 
