@@ -13,6 +13,10 @@
     },
     "android": {
       "package": "app.daydone.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -29,6 +33,13 @@
     "plugins": [
       "expo-router",
       "./plugins/with-android-cmake",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DayDone membutuhkan akses galeri untuk memilih foto dokumentasi kegiatan magang Anda.",
+          "cameraPermission": "DayDone membutuhkan akses kamera untuk mengambil foto dokumentasi kegiatan magang Anda."
+        }
+      ],
       [
         "expo-splash-screen",
         {
