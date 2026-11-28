@@ -52,6 +52,23 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Akun',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{
+                ios: 'person.crop.circle.fill',
+                android: 'account_circle',
+                web: 'account_circle',
+              }}
+              tintColor={color}
+              size={24}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
