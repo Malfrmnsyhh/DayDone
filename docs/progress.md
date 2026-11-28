@@ -2,7 +2,7 @@
 
 > Diperbarui oleh agent atau pemilik setiap selesai task. Kode di repo adalah sumber kebenaran; bila berbeda dengan catatan ini, perbaiki catatan ini.
 
-**Terakhir diperbarui:** 28 November 2026 (M8-4 Daftar Logbook dengan pencarian + infinite scroll & Detail Logbook + Galeri Foto/Lightbox di mobile selesai secara kode & unit test; siap verifikasi akhir di HP fisik sebelum M8-5)
+**Terakhir diperbarui:** 28 November 2026 (M8-5 Form Buat & Ubah Logbook mobile Pure-JS tanpa rebuild native selesai & lolos seluruh build/lint/test; menunggu uji HP fisik sebelum M8-6)
 
 ## Status per milestone
 
@@ -16,7 +16,7 @@
 | M5 Google Drive dan lampiran | Selesai |
 | M6 Pengerasan backend | Selesai sebagian — M6-1 s.d. M6-5 selesai, M6-6 ditunda ke M9 |
 | M7 Paket shared dan web dashboard | Selesai — Fase A, B, C selesai (M7-11 deploy Vercel ditunda ke M9) |
-| M8 Aplikasi mobile | Berjalan — M8-1, M8-2, M8-3, dan M8-4 selesai (kode & test lolos); lanjut uji HP fisik M8-4 lalu M8-5 |
+| M8 Aplikasi mobile | Berjalan — M8-1 s.d. M8-5 selesai (M8-4 terverifikasi di HP; M8-5 menunggu uji HP fisik sebelum M8-6) |
 | M9 Rilis & Deploy produksi | Belum dimulai |
 
 ## Detail
@@ -217,7 +217,8 @@
 - [x] M8-1 AC "development build jalan di Android" terverifikasi langsung di perangkat fisik Samsung Galaxy A33 5G (`SM_A336E`) via USB (`adb reverse` port 3000 & 8081), APK terpasang, Metro mengirim 1.432 modul tanpa error, dan layar login DayDone tampil normal.
 - [x] M8-2: Login Google native (`@react-native-google-signin/google-signin`) dengan `serverAuthCode` (`offlineAccess: true`, `forceCodeForRefreshToken: true`, scope `drive.file`), `lib/google-signin.ts`, sinkronisasi `signOutGoogle()` di `auth-store.ts`, serta state loading & alert error di `app/(auth)/login.tsx`. Terverifikasi login & masuk ke Beranda di perangkat Android fisik via USB.
 - [x] M8-3: Beranda mobile aktif — `QueryClientProvider` di `app/_layout.tsx`, `lib/logs-api.ts` (`useLogByDate` dengan pemetaan 404 → `null` & `useLogStats`), helper bulan lokal di `lib/date.ts` + unit test, kartu status logbook hari ini nyata, ringkasan bulanan, serta *pull-to-refresh* (`RefreshControl`) di `app/(tabs)/index.tsx`. Terverifikasi di perangkat Android fisik.
-- [x] M8-4: Daftar & Detail Logbook mobile — perluasan `lib/logs-api.ts` (`useLogsList` infinite query, `useLogDetail` dengan `staleTime` 4 menit, `useDeleteLog` invalidasi `['logs']`, + 4 unit test di `lib/logs-api.spec.ts`), layar daftar `app/(tabs)/logs.tsx` (pencarian debounce 300ms, `FlatList`, *pull-to-refresh*, *infinite scroll*, 4 state), serta layar detail `app/logs/[id].tsx` (galeri foto + fail-safe refetch `onError` signed URL, lightbox `Modal` layar penuh, tombol Hapus dengan konfirmasi `Alert`, dan penanganan 404).
+- [x] M8-4: Daftar & Detail Logbook mobile — perluasan `lib/logs-api.ts` (`useLogsList` infinite query, `useLogDetail` dengan `staleTime` 4 menit, `useDeleteLog` invalidasi `['logs']`, + 4 unit test di `lib/logs-api.spec.ts`), layar daftar `app/(tabs)/logs.tsx` (pencarian debounce 300ms, `FlatList`, *pull-to-refresh*, *infinite scroll*, 4 state), serta layar detail `app/logs/[id]/index.tsx` (galeri foto + fail-safe refetch `onError` signed URL, lightbox `Modal` layar penuh, tombol Hapus dengan konfirmasi `Alert`, dan penanganan 404). Terverifikasi di perangkat Android fisik.
+- [x] M8-5: Form Buat & Ubah Logbook mobile (Pure-JS Logic-First, tanpa rebuild native) — `useCreateLog` & `useUpdateLog` invalidasi `['logs']`, helper validasi Zod `@daydone/shared` + ekstraksi `409 LOG_DATE_CONFLICT` (`getLogDateConflict`, `validateLogFormInput`, `resolveInitialFormDate`), helper tanggal lokal `isValidDateString`, `shiftLocalDateString`, & `getMissingWeekdays` + unit test (28 tests di `apps/mobile`), komponen bersama `components/log-form.tsx` (kontrol tanggal pintasan Hari Ini/Kemarin + stepper `←`/`→` + input `YYYY-MM-DD`, tanggal tetap bisa diubah di mode edit, counter karakter `X / 5000`, callout 409 + tombol "Buka logbook tanggal itu", proteksi double-submit & `usePreventRemove` unsaved changes), rute `app/logs/new.tsx` & `app/logs/[id]/edit.tsx`, serta koneksi navigasi dari Beranda (termasuk chip hari kerja kosong), Daftar (`+ Buat`), dan Detail (`Ubah Logbook`). Kamera/galeri dipisah ke M8-6.
 - [x] Audit aksesibilitas login page & Google button (NFR-08): atribut `role="alert"`, `aria-hidden="true"`, dan `focusable="false"`.
 - [x] Unit test komprehensif `LoginPage` & `GoogleLoginButton` (`apps/web/src/pages/login-page.spec.tsx` — 7 tests lolos 100%).
 - [x] Eliminasi seluruh peringatan `act(...)` pada `auth-context.spec.tsx` (wrapping `clearSession` dalam `act` di `afterEach`).
