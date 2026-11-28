@@ -253,6 +253,42 @@ describe('api-client (mobile)', () => {
       expect(refreshCalls).toHaveLength(0);
     });
 
+    it('mempertahankan sesi aktif bila preserveSessionOn401 bernilai true saat rekoneksi Drive gagal 401', async () => {
+      await SecureStore.setItemAsync(
+        REFRESH_TOKEN_STORAGE_KEY,
+        'refresh-token-aktif',
+      );
+      setAccessToken('access-token-aktif');
+      vi.mocked(SecureStore.deleteItemAsync).mockClear();
+
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 401,
+            code: 'GOOGLE_AUTH_FAILED',
+            message: 'Code tidak valid',
+          }),
+          { status: 401 },
+        ),
+      );
+
+      await expect(
+        apiFetch('/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({ code: 'bad-reconnect-code', platform: 'MOBILE' }),
+          skipAuth: true,
+          preserveSessionOn401: true,
+        }),
+      ).rejects.toThrow(ApiError);
+
+      // Sesi aktif tidak boleh terhapus saat rekoneksi Drive gagal
+      expect(getAccessToken()).toBe('access-token-aktif');
+      expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(
+        await SecureStore.getItemAsync(REFRESH_TOKEN_STORAGE_KEY),
+      ).toBe('refresh-token-aktif');
+    });
+
     it('langsung membersihkan sesi bila terjadi 401 tetapi refresh token tidak ada di SecureStore', async () => {
       setAccessToken('token-tanpa-refresh');
 

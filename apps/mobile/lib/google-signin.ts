@@ -31,13 +31,28 @@ const ensureGoogleSigninConfigured = () : void => {
     isConfigured = true;
 }
 
-export const requestGoogleServerAuthCode = async (): Promise<string | null> => {
+export interface GoogleSignInRequestOptions {
+  /**
+   * Jika true (mis. saat rekoneksi Google Drive), keluar dulu dari cache SDK Google
+   * agar dialog pilih akun & layar persetujuan scope drive.file muncul kembali.
+   * Tidak menyentuh sesi DayDone yang sedang aktif.
+   */
+  forcePrompt?: boolean;
+}
+
+export const requestGoogleServerAuthCode = async (
+  options: GoogleSignInRequestOptions = {},
+): Promise<string | null> => {
     ensureGoogleSigninConfigured();
-    
+
     try {
         await GoogleSignin.hasPlayServices({
             showPlayServicesUpdateDialog: true,
         });
+
+        if (options.forcePrompt) {
+            await signOutGoogle();
+        }
 
         const response = await GoogleSignin.signIn();
 

@@ -201,6 +201,11 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'headers'> {
   headers?: Record<string, string>;
   skipAuth?: boolean;
   isRetry?: boolean;
+  /**
+   * Jika true, 401 dari endpoint auth non-refreshable (mis. rekoneksi Drive di /auth/google)
+   * tidak akan menghapus sesi aktif pengguna.
+   */
+  preserveSessionOn401?: boolean;
 }
 
 function isNonRefreshableAuthEndpoint(path: string): boolean {
@@ -221,7 +226,13 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { headers = {}, skipAuth = false, isRetry = false, ...restOptions } = options;
+  const {
+    headers = {},
+    skipAuth = false,
+    isRetry = false,
+    preserveSessionOn401 = false,
+    ...restOptions
+  } = options;
 
   const url = path.startsWith('http')
     ? path
@@ -249,7 +260,9 @@ export async function apiFetch<T>(
     // Jangan refresh jika 401 berasal dari endpoint non-refreshable
     if (isNonRefreshableAuthEndpoint(path)) {
       const errData = await parseErrorPayload(res);
-      await clearSession();
+      if (!preserveSessionOn401) {
+        await clearSession();
+      }
       throw new ApiError({ ...errData, statusCode: 401 });
     }
 
