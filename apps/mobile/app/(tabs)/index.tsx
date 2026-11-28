@@ -1,25 +1,26 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/lib/auth-store';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { useAuth } from "@/lib/auth-store";
 import {
   formatDateIndonesian,
   formatMonthYearIndonesian,
+  formatShortDateIndonesian,
   getCurrentLocalMonthString,
+  getMissingWeekdays,
   getTodayLocalDateString,
-} from '@/lib/date';
-import { getDriveStatusInfo } from '@/lib/drive-status';
-import { useLogByDate, useLogStats } from '@/lib/logs-api';
+} from "@/lib/date";
+import { getDriveStatusInfo } from "@/lib/drive-status";
+import { useLogByDate, useLogStats } from "@/lib/logs-api";
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -32,7 +33,7 @@ export default function HomeScreen() {
   const todayFormatted = formatDateIndonesian(today);
   const monthLabel = formatMonthYearIndonesian(currentMonth);
   const driveInfo = getDriveStatusInfo(user?.driveStatus);
-  const isDriveWarning = driveInfo.tone === 'warning';
+  const isDriveWarning = driveInfo.tone === "warning";
 
   const {
     data: todayLog,
@@ -47,6 +48,11 @@ export default function HomeScreen() {
     refetch: refetchStats,
   } = useLogStats(currentMonth);
 
+  const missingWeekdays = useMemo(
+    () => getMissingWeekdays(currentMonth, stats?.loggedDates ?? [], today),
+    [currentMonth, stats?.loggedDates, today],
+  );
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -57,10 +63,10 @@ export default function HomeScreen() {
   };
 
   const handleQuickWritePress = () => {
-    Alert.alert(
-      'Segera Hadir (M8-5)',
-      'Form buat logbook & ambil foto akan kita bangun di tahap M8-5.',
-    );
+    router.push({
+      pathname: '/logs/new',
+      params: { date: today },
+    });
   };
 
   return (
@@ -71,23 +77,25 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={['#0284C7']}
+            colors={["#0284C7"]}
             tintColor="#0284C7"
           />
-        }>
+        }
+      >
         {/* Header Profil Singkat */}
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Halo,</Text>
             <Text style={styles.userName} numberOfLines={1}>
-              {user?.name || 'Mahasiswa Magang'}
+              {user?.name || "Mahasiswa Magang"}
             </Text>
           </View>
           <Pressable
             style={styles.logoutButton}
             onPress={logout}
             accessibilityRole="button"
-            accessibilityLabel="Keluar">
+            accessibilityLabel="Keluar"
+          >
             <Text style={styles.logoutText}>Keluar</Text>
           </Pressable>
         </View>
@@ -99,13 +107,13 @@ export default function HomeScreen() {
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Status Logbook Hari Ini</Text>
             {!isTodayLoading && !isTodayError && (
-              <View
-                style={todayLog ? styles.badgeDone : styles.badgePending}>
+              <View style={todayLog ? styles.badgeDone : styles.badgePending}>
                 <Text
                   style={
                     todayLog ? styles.badgeTextDone : styles.badgeTextPending
-                  }>
-                  {todayLog ? 'Sudah Diisi' : 'Belum Diisi'}
+                  }
+                >
+                  {todayLog ? "Sudah Diisi" : "Belum Diisi"}
                 </Text>
               </View>
             )}
@@ -119,13 +127,15 @@ export default function HomeScreen() {
           ) : isTodayError ? (
             <View>
               <Text style={styles.errorText}>
-                Gagal memuat status logbook hari ini. Pastikan koneksi ke server aktif.
+                Gagal memuat status logbook hari ini. Pastikan koneksi ke server
+                aktif.
               </Text>
               <Pressable
                 style={styles.secondaryButton}
                 onPress={() => refetchToday()}
                 accessibilityRole="button"
-                accessibilityLabel="Coba lagi muat status hari ini">
+                accessibilityLabel="Coba lagi muat status hari ini"
+              >
                 <Text style={styles.secondaryButtonText}>Coba Lagi</Text>
               </Pressable>
             </View>
@@ -137,7 +147,7 @@ export default function HomeScreen() {
               <Text style={styles.metaText}>
                 {todayLog.attachmentCount > 0
                   ? `${todayLog.attachmentCount} foto dokumentasi terlampir`
-                  : 'Belum ada foto dokumentasi'}
+                  : "Belum ada foto dokumentasi"}
               </Text>
               <Pressable
                 style={({ pressed }) => [
@@ -148,10 +158,11 @@ export default function HomeScreen() {
                 accessibilityLabel="Lihat detail logbook hari ini"
                 onPress={() =>
                   router.push({
-                    pathname: '/logs/[id]',
+                    pathname: "/logs/[id]",
                     params: { id: todayLog.id },
                   })
-                }>
+                }
+              >
                 <Text style={styles.secondaryButtonText}>
                   Lihat Detail Hari Ini
                 </Text>
@@ -160,7 +171,8 @@ export default function HomeScreen() {
           ) : (
             <View>
               <Text style={styles.cardDesc}>
-                Catat kegiatan magang dan pencapaian kerjamu hari ini sebelum pulang agar tidak terlupa.
+                Catat kegiatan magang dan pencapaian kerjamu hari ini sebelum
+                pulang agar tidak terlupa.
               </Text>
               <Pressable
                 style={({ pressed }) => [
@@ -169,7 +181,8 @@ export default function HomeScreen() {
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Tulis logbook cepat"
-                onPress={handleQuickWritePress}>
+                onPress={handleQuickWritePress}
+              >
                 <Text style={styles.primaryButtonText}>
                   + Tulis Logbook Cepat
                 </Text>
@@ -187,42 +200,71 @@ export default function HomeScreen() {
               <Text style={styles.loadingText}>Memuat ringkasan...</Text>
             </View>
           ) : (
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {stats?.totalThisMonth ?? 0}
-                </Text>
-                <Text style={styles.statLabel}>Bulan Ini</Text>
+            <View>
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>
+                    {stats?.totalThisMonth ?? 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Bulan Ini</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>
+                    {stats?.totalAllTime ?? 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Total Logbook</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {stats?.totalAllTime ?? 0}
-                </Text>
-                <Text style={styles.statLabel}>Total Logbook</Text>
-              </View>
+
+              {missingWeekdays.length > 0 && (
+                <View style={styles.missingSection}>
+                  <Text style={styles.missingTitle}>
+                    Hari kerja belum diisi ({missingWeekdays.length})
+                  </Text>
+                  <View style={styles.missingChipsRow}>
+                    {missingWeekdays.map((missingDate) => (
+                      <Pressable
+                        key={missingDate}
+                        style={({ pressed }) => [
+                          styles.missingChip,
+                          pressed && styles.buttonPressed,
+                        ]}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/logs/new',
+                            params: { date: missingDate },
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Tulis logbook tanggal ${formatShortDateIndonesian(missingDate)}`}>
+                        <Text style={styles.missingChipText}>
+                          + {formatShortDateIndonesian(missingDate)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </View>
 
         {/* Kartu Info Integrasi Drive */}
         <View
-          style={[
-            styles.infoCard,
-            isDriveWarning && styles.infoCardWarning,
-          ]}>
+          style={[styles.infoCard, isDriveWarning && styles.infoCardWarning]}
+        >
           <Text
             style={[
               styles.infoTitle,
               isDriveWarning && styles.infoTitleWarning,
-            ]}>
+            ]}
+          >
             {driveInfo.title}
           </Text>
           <Text
-            style={[
-              styles.infoText,
-              isDriveWarning && styles.infoTextWarning,
-            ]}>
+            style={[styles.infoText, isDriveWarning && styles.infoTextWarning]}
+          >
             {driveInfo.description}
           </Text>
         </View>
@@ -234,16 +276,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   container: {
     padding: 20,
     paddingBottom: 32,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
     gap: 12,
   },
@@ -252,185 +294,217 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#64748B",
   },
   userName: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   logoutButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
   },
   logoutText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#EF4444',
+    fontWeight: "600",
+    color: "#EF4444",
   },
   dateText: {
     fontSize: 13,
-    color: '#0284C7',
-    fontWeight: '600',
+    color: "#0284C7",
+    fontWeight: "600",
     marginBottom: 20,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000000',
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
     gap: 8,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: "#1E293B",
   },
   badgePending: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: "#FEF3C7",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   badgeTextPending: {
-    color: '#D97706',
+    color: "#D97706",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   badgeDone: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: "#DCFCE7",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   badgeTextDone: {
-    color: '#15803D',
+    color: "#15803D",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
   },
   loadingText: {
     fontSize: 13,
-    color: '#64748B',
+    color: "#64748B",
   },
   errorText: {
     fontSize: 13,
-    color: '#B91C1C',
+    color: "#B91C1C",
     lineHeight: 19,
     marginBottom: 12,
   },
   cardDesc: {
     fontSize: 13,
-    color: '#64748B',
+    color: "#64748B",
     lineHeight: 19,
     marginBottom: 16,
   },
   logSnippet: {
     fontSize: 14,
-    color: '#334155',
+    color: "#334155",
     lineHeight: 20,
     marginBottom: 8,
   },
   metaText: {
     fontSize: 12,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 14,
   },
   primaryButton: {
-    backgroundColor: '#0284C7',
+    backgroundColor: "#0284C7",
     borderRadius: 10,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   secondaryButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
     borderRadius: 10,
     paddingVertical: 11,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonPressed: {
     opacity: 0.85,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     fontSize: 14,
   },
   secondaryButtonText: {
-    color: '#0F172A',
-    fontWeight: '600',
+    color: "#0F172A",
+    fontWeight: "600",
     fontSize: 13,
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 14,
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#0284C7',
+    fontWeight: "800",
+    color: "#0284C7",
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: "#64748B",
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 36,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: "#E2E8F0",
+  },
+  missingSection: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  missingTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 10,
+  },
+  missingChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  missingChip: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  missingChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
   },
   infoCard: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#0284C7',
+    borderLeftColor: "#0284C7",
   },
   infoCardWarning: {
-    backgroundColor: '#FFFBEB',
-    borderLeftColor: '#D97706',
+    backgroundColor: "#FFFBEB",
+    borderLeftColor: "#D97706",
   },
   infoTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#0369A1',
+    fontWeight: "700",
+    color: "#0369A1",
     marginBottom: 4,
   },
   infoTitleWarning: {
-    color: '#B45309',
+    color: "#B45309",
   },
   infoText: {
     fontSize: 12,
-    color: '#0C4A6E',
+    color: "#0C4A6E",
     lineHeight: 18,
   },
   infoTextWarning: {
-    color: '#92400E',
+    color: "#92400E",
   },
 });

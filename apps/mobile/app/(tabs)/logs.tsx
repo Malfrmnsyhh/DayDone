@@ -108,12 +108,24 @@ export default function LogsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
-          <Text style={styles.title}>Riwayat Logbook</Text>
-          {!isLoading && !isError && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{totalCount} Catatan</Text>
-            </View>
-          )}
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Riwayat Logbook</Text>
+            {!isLoading && !isError && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{totalCount} Catatan</Text>
+              </View>
+            )}
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.createButton,
+              pressed && styles.cardPressed,
+            ]}
+            onPress={() => router.push('/logs/new')}
+            accessibilityRole="button"
+            accessibilityLabel="Buat logbook baru">
+            <Text style={styles.createButtonText}>+ Buat</Text>
+          </Pressable>
         </View>
 
         {/* Input Pencarian + Tombol Reset */}
@@ -192,13 +204,21 @@ export default function LogsScreen() {
                   ? `Tidak ada logbook yang cocok dengan kata kunci "${debouncedSearch}".`
                   : 'Logbook yang kamu buat akan muncul di sini berurutan dari tanggal terbaru.'}
               </Text>
-              {debouncedSearch.length > 0 && (
+              {debouncedSearch.length > 0 ? (
                 <Pressable
                   style={styles.retryButton}
                   onPress={handleClearSearch}
                   accessibilityRole="button"
                   accessibilityLabel="Reset pencarian">
                   <Text style={styles.retryButtonText}>Reset Pencarian</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={styles.retryButton}
+                  onPress={() => router.push('/logs/new')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Buat logbook baru">
+                  <Text style={styles.retryButtonText}>+ Buat Logbook</Text>
                 </Pressable>
               )}
             </View>
@@ -244,6 +264,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
     gap: 8,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  createButton: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#0284C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   title: {
     fontSize: 22,
